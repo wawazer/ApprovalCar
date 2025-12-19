@@ -1,14 +1,17 @@
 const SPREADSHEET_ID = '1hg3CynBrqFci3kEg7c611ht4jtIDO9Ocyh2RPc1ixE8';
 const SHEET_NAME     = 'Request Mobil';
 
-const PIC_EMAIL = 'wawazer@gmail.com';
-const CC_EMAIL  = '';
-// const CC_EMAIL  = 'muhammad.wawazer@pelindo.co.id,listio.margianto@pelindo.co.id,reza.abimoko@pelindo.co.id';
-const LV1_APPROVER_EMAILS = 'wawazer@gmail.com'; 
-const LV2_APPROVER_EMAILS = 'delumintu@gmail.com';
-const KOOR_WA_NUMBER = '6281803216767'; 
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxICLEfVFaYQdZydstk4kwmZHipDNvTSxB2xj1DwATX9wHAmCCW8FZQf9SiwxiEgtlOnQ/exec';
-                   
+// const PIC_EMAIL = 'WAWAZER@GMAIL.COM';
+// const CC_EMAIL  = ' listio.margianto@pelindo.co.id, Reza.abimoko@pelindo.co.id';
+const CC_EMAIL  = 'listio.margianto@pelindo.co.id, Reza.abimoko@pelindo.co.id, wahyu.ekoyulianto@pelindo.co.id';
+// const LV1_APPROVER_EMAILS = 'iwan.sulistiono@pelindo.co.id'; 
+const LV1_APPROVER_EMAILS = 'iwan.sulistiono@pelindo.co.id'; 
+// const LV2_APPROVER_EMAILS = 'delumintu@gmail.com';
+const KOOR_WA_NUMBER = '6285331946877'; 
+// const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxICLEfVFaYQdZydstk4kwmZHipDNvTSxB2xj1DwATX9wHAmCCW8FZQf9SiwxiEgtlOnQ/exec'; langsung ke approval emai
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbygGiOvv66mnFf7F36Bp-_BXy-N0HuNWD0yXCIcdhYPBoBLgK3tzI2EjuJ9wNZ9fVVY/exec';
+                    
+
 
 const COL_TIMESTAMP      = 1;  
 const COL_DASAR_SURAT    = 2;  
@@ -306,13 +309,6 @@ function doGet(e) {
   return html;
 }
 
-/************************************************************
- KOORDINATOR MANUAL UBAH STATUS
- ************************************************************/
-
-/************************************************************
- * FUNGSI UNTUK WEB APP (LIST MOBIL & SUBMIT FORM)
- ************************************************************/
 
 // Ambil semua mobil dari sheet "Daftar Mobil"
 function getAllCars() {
@@ -327,14 +323,13 @@ function getAllCars() {
   return data;
 }
 
-// Ambil mobil yang AVAILABLE antara start–end (datetime string dari <input type="datetime-local">)
+// Ambil mobil yang AVAILABLE 
 function getAvailableCars(startIso, endIso) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const reqSheet = ss.getSheetByName(SHEET_NAME);
 
   const allCars = getAllCars();
   if (!startIso || !endIso) {
-    // kalau tanggal belum diisi, balikkan semua mobil saja
     return allCars;
   }
 
@@ -373,32 +368,32 @@ function submitRequest(form) {
   const now = new Date();
 
   const rowValues = [
-    now,                            // Timestamp
-    form.dasarSurat || '',          // Dasar Surat
-    new Date(form.tglBerangkat),    // Tanggal Berangkat
-    new Date(form.tglKepulangan),   // Tanggal Kepulangan
-    form.noKendaraan || '',         // Nomor Kendaraan
-    form.emailPengaju || '',        // Email Pengaju
-    form.unitKerja || '',           // Unit Kerja
-    form.driver || '',              // Driver
-    form.daftarTamu || '',          // Daftar Tamu
-    form.tujuan || '',              // Tujuan
-    form.hotel || '',               // Hotel
-    form.jumlahHari || '',          // Jumlah Hari (boleh diketik manual dulu)
-    form.biaya || '',               // Biaya
-    form.namaPIC || '',             // Nama PIC
-    '',                             // Status LV1
-    '',                             // Status LV2
-    ''                              // Status Final
+    now,                            
+    form.dasarSurat || '',          
+    new Date(form.tglBerangkat),    
+    new Date(form.tglKepulangan),   
+    form.noKendaraan || '',         
+    form.emailPengaju || '',        
+    form.unitKerja || '',           
+    form.driver || '',              
+    form.daftarTamu || '',          
+    form.tujuan || '',              
+    form.hotel || '',               
+    form.jumlahHari || '',          
+    form.biaya || '',               
+    form.namaPIC || '',             
+    '',                             
+    '',                             
+    ''                              
   ];
 
   sheet.appendRow(rowValues);
   const newRowIndex = sheet.getLastRow();
 
-  // kirim email ke approver level 1 (pakai fungsi existing)
+  // kirim email ke approver level 1 
   sendEmailForRow(newRowIndex);
 
-  // kirim email WA link ke pemohon seperti di onFormSubmit (opsional)
+  // kirim email WA link ke pemohon seperti di onFormSubmit 
   const dasarSurat       = form.dasarSurat || '';
   const tglBerangkat     = form.tglBerangkat || '';
   const tglKepulangan    = form.tglKepulangan || '';
