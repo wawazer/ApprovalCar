@@ -1,508 +1,756 @@
+/************************************************************
+ * CONFIGURATION & MAPPING 
+ ************************************************************/
 const SPREADSHEET_ID = '1hg3CynBrqFci3kEg7c611ht4jtIDO9Ocyh2RPc1ixE8';
-const SHEET_NAME     = 'Request Mobil';
+const SHEET_NAME     = 'Request Mobil';
+const FORM_ID        = '1k-evV4VwEn29VSHheqlvgML6d0SQfGE7SZiWh0t-9s4';
+const WEBAPP_URL     = 'https://script.google.com/macros/s/AKfycbxICLEfVFaYQdZydstk4kwmZHipDNvTSxB2xj1DwATX9wHAmCCW8FZQf9SiwxiEgtlOnQ/exec'; 
 
-// const PIC_EMAIL = 'WAWAZER@GMAIL.COM';
-// const CC_EMAIL  = ' listio.margianto@pelindo.co.id, Reza.abimoko@pelindo.co.id';
-const CC_EMAIL  = 'listio.margianto@pelindo.co.id, Reza.abimoko@pelindo.co.id, wahyu.ekoyulianto@pelindo.co.id';
-// const LV1_APPROVER_EMAILS = 'iwan.sulistiono@pelindo.co.id'; 
-const LV1_APPROVER_EMAILS = 'iwan.sulistiono@pelindo.co.id'; 
-// const LV2_APPROVER_EMAILS = 'delumintu@gmail.com';
-const KOOR_WA_NUMBER = '6285331946877'; 
-// const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxICLEfVFaYQdZydstk4kwmZHipDNvTSxB2xj1DwATX9wHAmCCW8FZQf9SiwxiEgtlOnQ/exec'; langsung ke approval emai
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbygGiOvv66mnFf7F36Bp-_BXy-N0HuNWD0yXCIcdhYPBoBLgK3tzI2EjuJ9wNZ9fVVY/exec';
-                    
+const LV1_APPROVER_EMAILS = 'muhammad.wawazer@pelindo.co.id';
+const CC_EMAIL = 'wawazer@gmail.com';
 
+const COL_TIMESTAMP      = 1;  
+const COL_TGL_BERANGKAT  = 3;  
+const COL_TGL_KEPULANGAN = 4;  
+const COL_PILIH_KENDARAAN= 5;  
+const COL_EMAIL_PEMOHON  = 6;  
+const COL_UNIT_KERJA     = 7;  
+const COL_DAFTAR_TAMU    = 8;  
+const COL_TUJUAN         = 9;  
+const COL_HOTEL          = 10; 
+const COL_NAMA_PEMOHON   = 13; 
+const COL_WA_PEMOHON     = 15; 
+const COL_STATUS_LV1     = 17; 
+const COL_STATUS_FINAL   = 19; 
+const COL_REASON_LV1     = 20; 
 
-const COL_TIMESTAMP      = 1;  
-const COL_DASAR_SURAT    = 2;  
-const COL_TGL_BERANGKAT  = 3;  
-const COL_TGL_KEPULANGAN = 4;  
-const COL_NO_KENDARAAN   = 5;  
-const COL_EMAIL_PENGAJU  = 6;  
-const COL_UNIT_KERJA     = 7;  
-const COL_DRIVER         = 8;  
-const COL_DAFTAR_TAMU    = 9;  
-const COL_TUJUAN         = 10; 
-const COL_HOTEL          = 11; 
-const COL_JUMLAH_HARI    = 12; 
-const COL_BIAYA          = 13; 
-const COL_NAMA_PIC       = 14; 
-const COL_STATUS_LV1   = 15; 
-const COL_STATUS_LV2   = 16; 
-const COL_STATUS_FINAL = 17; 
+/************************************************************
+ * 1. TRIGGER: ON FORM SUBMIT 
+ ************************************************************/
+function onFormSubmit(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const row = e.range.getRow();
+  
+  const vals = sheet.getRange(row, 1, 1, 21).getValues()[0]; 
+  
+  const d = {
+    row: row,
+    tglMulaiRaw: vals[COL_TGL_BERANGKAT-1],
+    tglSelesaiRaw: vals[COL_TGL_KEPULANGAN-1],
+    mobilRaw: vals[COL_PILIH_KENDARAAN-1].toString(),
+    emailPengaju: vals[COL_EMAIL_PEMOHON-1],
+    noWaPengaju: vals[COL_WA_PEMOHON-1], 
+    unitKerja: vals[COL_UNIT_KERJA-1],
+    daftarTamu: vals[COL_DAFTAR_TAMU-1],
+    tujuan: vals[COL_TUJUAN-1],
+    hotel: vals[COL_HOTEL-1],
+    namaPIC: vals[COL_NAMA_PEMOHON-1]
+  };
 
+  let namaMobilBersih = d.mobilRaw.replace("⚠️ ", "").replace("✅ ", "").split(" (")[0].trim();
+  d.nomorKendaraan = namaMobilBersih;
+  sheet.getRange(row, COL_PILIH_KENDARAAN).setValue(namaMobilBersih);
 
-function generateWaLink(phoneNumber, message) {
-  const encodedMessage = encodeURIComponent(message);
-  return `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-}
-
-function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('Request Mobil')
-    .addItem('Kirim email ke PIC (Pastikan baris sudah benar)', 'sendEmailForSelectedRow')
-    .addToUi();
-}
-
-/************************************************************/
-function sendEmailForRow(row) {
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SHEET_NAME);
-
-  if (!sheet) {
-    throw new Error('Sheet dengan nama "' + SHEET_NAME + '" tidak ditemukan.');
-  }
-
-  const lastCol = sheet.getLastColumn();
-  const data    = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
-
-  const timestamp        = data[COL_TIMESTAMP      - 1];
-  const dasarSurat       = data[COL_DASAR_SURAT    - 1];
-  const tglBerangkat     = data[COL_TGL_BERANGKAT  - 1];
-  const tglKepulangan    = data[COL_TGL_KEPULANGAN - 1];
-  const nomorKendaraan   = data[COL_NO_KENDARAAN   - 1];
-  const emailPengaju     = data[COL_EMAIL_PENGAJU  - 1];
-  const unitKerja        = data[COL_UNIT_KERJA     - 1];
-  const driver           = data[COL_DRIVER         - 1];
-  const daftarTamu       = data[COL_DAFTAR_TAMU    - 1];
-  const tujuanPerjalanan = data[COL_TUJUAN         - 1];
-  const hotelMenginap    = data[COL_HOTEL          - 1];
-  const jumlahHari       = data[COL_JUMLAH_HARI    - 1];
-  const biayaPelayanan   = data[COL_BIAYA          - 1];
-  const namaPIC          = data[COL_NAMA_PIC       - 1];
-  const status           = data[COL_STATUS_FINAL   - 1];
+  const cek = checkJadwalBentrok(namaMobilBersih, d.tglMulaiRaw, d.tglSelesaiRaw, row);
+  
+  if (cek.bentrok) {
+    sheet.getRange(row, COL_STATUS_LV1).setValue("Rejected (System)");
+    sheet.getRange(row, COL_STATUS_FINAL).setValue("Rejected");
+    sheet.getRange(row, COL_REASON_LV1).setValue(`AUTO-REJECT: Bentrok dengan ${cek.pic} (${cek.tgl})`);
+    
+    MailApp.sendEmail({
+      to: d.emailPengaju,
+      subject: 'Mobil Tidak Tersedia - Penolakan Otomatis',
+      htmlBody: `Yth <b>${d.namaPIC}</b>,<br><br>Unit <b>${namaMobilBersih}</b> ditolak otomatis karena bentrok jadwal.`
+    });
 
 
-  // kalau sudah ada status, jangan kirim ulang ke PIC
-  if (status && status !== '') {
-    console.log('Row ' + row + ' sudah punya status: ' + status + ', email ke PIC tidak dikirim ulang.');
-    return;
-  }
+    if (d.noWaPengaju) {
+      const pesanBentrok = `❌ *PENGAJUAN DITOLAK OTOMATIS*\n\nHalo *${d.namaPIC}*,\nMohon maaf, unit *${namaMobilBersih}* ditolak oleh sistem karena bentrok dengan jadwal *${cek.pic}* (${cek.tgl}).\n\nSilakan pilih waktu atau unit lain.`;
+      kirimWAWatzap(d.noWaPengaju, pesanBentrok);
+    }
 
-  if (!WEBAPP_URL || WEBAPP_URL === '') {
-    throw new Error('WEBAPP_URL belum diisi.');
-  }
-const approveUrl = `${WEBAPP_URL}?action=approve&row=${row}&level=1`;
-const rejectUrl  = `${WEBAPP_URL}?action=reject&row=${row}&level=1`;
+    return; 
+  }
 
-  const subject = `Request Peminjaman Mobil dari ${namaPIC || ''}`;
+  d.tglBerangkat = d.tglMulaiRaw instanceof Date ? Utilities.formatDate(d.tglMulaiRaw, "GMT+7", "dd/MM/yyyy HH:mm") : d.tglMulaiRaw;
+  d.tglKepulangan = d.tglSelesaiRaw instanceof Date ? Utilities.formatDate(d.tglSelesaiRaw, "GMT+7", "dd/MM/yyyy HH:mm") : d.tglSelesaiRaw;
 
-  const htmlBody = `
-    <p>Ada request Peminjaman Mobil :</p>
-    <table border="0" cellpadding="4" cellspacing="0">
-      <tr><td><b>Timestamp</b></td><td>: ${timestamp || ''}</td></tr>
-      <tr><td><b>Nama PIC</b></td><td>: ${namaPIC || ''}</td></tr>
-      <tr><td><b>Unit Kerja</b></td><td>: ${unitKerja || ''}</td></tr>
-      <tr><td><b>Dasar Surat</b></td><td>: ${dasarSurat || ''}</td></tr>
-      <tr><td><b>Tanggal Berangkat</b></td><td>: ${tglBerangkat || ''}</td></tr>
-      <tr><td><b>Tanggal Kepulangan</b></td><td>: ${tglKepulangan || ''}</td></tr>
-      <tr><td><b>Nomor Kendaraan</b></td><td>: ${nomorKendaraan || ''}</td></tr>
-      <tr><td><b>Email Pengaju</b></td><td>: ${emailPengaju || ''}</td></tr>
-      <tr><td><b>Driver</b></td><td>: ${driver || ''}</td></tr>
-      <tr><td><b>Daftar Tamu yang Dilayani</b></td><td>: ${daftarTamu || ''}</td></tr>
-      <tr><td><b>Tujuan Perjalanan</b></td><td>: ${tujuanPerjalanan || ''}</td></tr>
-      <tr><td><b>Hotel Menginap</b></td><td>: ${hotelMenginap || ''}</td></tr>
-      <tr><td><b>Jumlah Hari</b></td><td>: ${jumlahHari || ''}</td></tr>
-      <tr><td><b>Biaya Pelayanan</b></td><td>: ${biayaPelayanan || ''}</td></tr>
-    </table>
-    <p>
-      <a href="${approveUrl}">✅ <b>APPROVE</b></a>&nbsp;&nbsp;&nbsp;
-      <a href="${rejectUrl}">❌ <b>REJECT</b></a>
-    </p>
-  `;
+  sendApprovalToLv1_(d);
 
-const mailOptions = {
-  to: LV1_APPROVER_EMAILS,  
-  subject: subject,
-  htmlBody: htmlBody
-};
-
-if (CC_EMAIL && CC_EMAIL !== '') {
-  mailOptions.cc = CC_EMAIL; 
-}
-
-  MailApp.sendEmail(mailOptions);
-
-  console.log('Email request dikirim ke PIC untuk row ' + row);
+  const noWaLV1 = "6281803216767"; 
+  const pesanLV1 = `🔔 *PENGAJUAN MOBIL BARU*\n\nYth. Bapak/Ibu,\nAda permohonan kendaraan baru.\n\n*PIC:* ${d.namaPIC}\n*Unit:* ${d.nomorKendaraan}\n*Tujuan:* ${d.tujuan}\n*Waktu:* ${d.tglBerangkat}\n\nMohon cek email Anda untuk melakukan persetujuan.`;
+  
+  Logger.log("Mengirim WA ke LV1: " + noWaLV1);
+  kirimWAWatzap(noWaLV1, pesanLV1);
 }
 
 /************************************************************
- *  KIRIM EMAIL 
- ************************************************************/
-
-function sendEmailForSelectedRow() {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert('Sheet "' + SHEET_NAME + '" tidak ditemukan.');
-    return;
-  }
-
-  const range = sheet.getActiveRange();
-  const row   = range.getRow();
-
-  if (row === 1) {
-    SpreadsheetApp.getUi().alert('Pilih baris data, bukan header.');
-    return;
-  }
-
-  try {
-    sendEmailForRow(row);
-    SpreadsheetApp.getUi().alert('Email request telah dikirim ke PIC untuk baris ke-' + row + '.');
-  } catch (err) {
-    SpreadsheetApp.getUi().alert('Gagal kirim email: ' + err.message);
-  }
-}
-
-/************************************************************
- * EMAIL STATUS KE PEMOHON
- ************************************************************/
-
-function kirimEmailKePemohon(row, newStatus) {
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  const lastCol = sheet.getLastColumn();
-  const data    = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
-
-  const timestamp        = data[COL_TIMESTAMP      - 1];
-  const dasarSurat       = data[COL_DASAR_SURAT    - 1];
-  const tglBerangkat     = data[COL_TGL_BERANGKAT  - 1];
-  const tglKepulangan    = data[COL_TGL_KEPULANGAN - 1];
-  const nomorKendaraan   = data[COL_NO_KENDARAAN   - 1];
-  const emailPengaju     = data[COL_EMAIL_PENGAJU  - 1];
-  const unitKerja        = data[COL_UNIT_KERJA     - 1];
-  const driver           = data[COL_DRIVER         - 1];
-  const tujuanPerjalanan = data[COL_TUJUAN         - 1];
-  const namaPIC          = data[COL_NAMA_PIC       - 1];
-
-  if (!emailPengaju || emailPengaju === '') {
-    console.log('Row ' + row + ' tidak punya Email Pengaju, email ke pemohon tidak dikirim.');
-    return;
-  }
-
-  const subjectPemohon = `Status Permohonan Mobil (${newStatus})`;
-  const htmlPemohon = `
-    <p>Yth. ${namaPIC || 'Pemohon'},</p>
-    <p>Permohonan penggunaan mobil Anda telah diproses dengan status: <b>${newStatus}</b>.</p>
-    <p>Detail permohonan:</p>
-    <table border="0" cellpadding="4" cellspacing="0">
-      <tr><td><b>Timestamp</b></td><td>: ${timestamp || ''}</td></tr>
-      <tr><td><b>Dasar Surat</b></td><td>: ${dasarSurat || ''}</td></tr>
-      <tr><td><b>Tanggal Berangkat</b></td><td>: ${tglBerangkat || ''}</td></tr>
-      <tr><td><b>Tanggal Kepulangan</b></td><td>: ${tglKepulangan || ''}</td></tr>
-      <tr><td><b>Nomor Kendaraan</b></td><td>: ${nomorKendaraan || '-'}</td></tr>
-      <tr><td><b>Unit Kerja</b></td><td>: ${unitKerja || '-'}</td></tr>
-      <tr><td><b>Driver</b></td><td>: ${driver || '-'}</td></tr>
-      <tr><td><b>Tujuan Perjalanan</b></td><td>: ${tujuanPerjalanan || ''}</td></tr>
-    </table>
-    <p>Terima kasih.</p>
-  `;
-
-  MailApp.sendEmail({
-    to: emailPengaju,
-    subject: subjectPemohon,
-    htmlBody: htmlPemohon
-  });
-
-  console.log('Email status dikirim ke pemohon untuk row ' + row);
-}
-
-/************************************************************
- *HANDLE APPROVE / REJECT
- ************************************************************/
-
+ * 2. WEBAPP HANDLER 
+ ************************************************************/
 function doGet(e) {
-  const action = e.parameter.action;
-  const rowStr = e.parameter.row;
-  const level  = parseInt(e.parameter.level || '1', 10); // default 1 kalau tidak ada
+  // Tambahkan Header X-Frame-Options agar bisa dibuka di semua browser
+  const output = processRequest(e);
+  return output.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
 
-  if (!action || !rowStr) {
-    return ContentService.createTextOutput('Parameter tidak lengkap.');
+function processRequest(e) {
+  try {
+    const action = e.parameter.action;
+    const row = parseInt(e.parameter.row);
+    const reason = e.parameter.reason || "";
+
+    if (action === "reject" && !e.parameter.reason) return renderReasonForm(row);
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    const status = action === "approve" ? "Approved" : "Rejected";
+    
+    sheet.getRange(row, COL_STATUS_LV1).setValue(status);
+    sheet.getRange(row, COL_STATUS_FINAL).setValue(status);
+    if (action === "reject") sheet.getRange(row, COL_REASON_LV1).setValue(reason);
+
+    const vals = sheet.getRange(row, 1, 1, 21).getValues()[0];
+    const noWaPemohon = vals[COL_WA_PEMOHON - 1]; 
+    const namaPIC = vals[COL_NAMA_PEMOHON - 1];
+    const unitMobil = vals[COL_PILIH_KENDARAAN - 1].toString();
+    const tujuan = vals[COL_TUJUAN - 1]; 
+
+    // =======================================================
+    // TAMBAHAN: UPDATE STATUS & KIRIM WA DRIVER
+    // =======================================================
+    if (action === "approve") {
+      const sheetMaster = ss.getSheetByName("Master_Armada");
+      if (sheetMaster) {
+        const dataMaster = sheetMaster.getDataRange().getValues();
+        for (let i = 1; i < dataMaster.length; i++) {
+          if (unitMobil.indexOf(dataMaster[i][0]) !== -1) { 
+            // Update status mobil jadi In Use
+            sheetMaster.getRange(i + 1, 5).setValue("In Use"); 
+
+            // --- Bagian Kirim WA ke Driver ---
+            const namaDriver = dataMaster[i][2]; 
+            const noWaDriver = dataMaster[i][3]; 
+            
+            if (noWaDriver) {
+              const linkFormKembali = "https://docs.google.com/forms/d/e/1FAIpQLSdtvfgFGcgfVM-cggtpkJt5Uw-zqoIx0zHzkK5mlVduT_UWog/viewform";
+              const pesanDriver = `🚛 *TUGAS BARU: ${unitMobil}*\n\nHalo *${namaDriver}*,\nAda tugas pengantaran:\n📍 *Tujuan:* ${tujuan}\n👤 *PIC:* ${namaPIC}\n\nJika sudah kembali ke kantor, mohon klik link ini untuk lapor KM Akhir:\n👉 ${linkFormKembali}`;
+              
+              kirimWAWatzap(noWaDriver, pesanDriver);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    if (noWaPemohon) {
+      let pesanWA = "";
+      if (action === "approve") {
+        pesanWA = `✅ *PERMOHONAN DISETUJUI*\n\nHalo *${namaPIC}*,\nPermohonan mobil *${unitMobil}* Anda telah *DISETUJUI*.\n\nSelamat bertugas!`;
+      } else {
+        pesanWA = `❌ *PERMOHONAN DITOLAK*\n\nHalo *${namaPIC}*,\nMohon maaf, permohonan mobil *${unitMobil}* Anda *DITOLAK*.\n*Alasan:* ${reason}`;
+      }
+      kirimWAWatzap(noWaPemohon, pesanWA);
+    }
+
+    kirimEmailFinal_(row, status, reason);
+
+    return HtmlService.createHtmlOutput(`
+      <div style="font-family:sans-serif;text-align:center;padding-top:50px;">
+        <div style="display:inline-block;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+          <h2 style="color:#28a745;">✅ BERHASIL!</h2>
+          <p>Status baris <b>${row}</b> sudah di-update menjadi <b>${status}</b>.</p>
+          <p>Status mobil & Notifikasi Driver telah diproses.</p>
+          <p>Anda bisa menutup halaman ini.</p>
+        </div>
+      </div>`);
+  } catch (err) {
+    return HtmlService.createHtmlOutput("<b>ERROR:</b> " + err.message);
+  }
+}
+
+// function processRequest(e) {
+//   try {
+//     const action = e.parameter.action;
+//     const row = parseInt(e.parameter.row);
+//     const reason = e.parameter.reason || "";
+
+//     if (action === "reject" && !e.parameter.reason) return renderReasonForm(row);
+
+//     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+//     const sheet = ss.getSheetByName(SHEET_NAME);
+//     const status = action === "approve" ? "Approved" : "Rejected";
+    
+//     sheet.getRange(row, COL_STATUS_LV1).setValue(status);
+//     sheet.getRange(row, COL_STATUS_FINAL).setValue(status);
+//     if (action === "reject") sheet.getRange(row, COL_REASON_LV1).setValue(reason);
+
+//     const vals = sheet.getRange(row, 1, 1, 21).getValues()[0];
+//     const noWaPemohon = vals[COL_WA_PEMOHON - 1]; 
+//     const namaPIC = vals[COL_NAMA_PEMOHON - 1];
+//     const unitMobil = vals[COL_PILIH_KENDARAAN - 1].toString();
+
+//     // =======================================================
+//     // TAMBAHAN: UPDATE STATUS DI MASTER_ARMADA JADI "In Use"
+//     // =======================================================
+//     if (action === "approve") {
+//       const sheetMaster = ss.getSheetByName("Master_Armada");
+//       if (sheetMaster) {
+//         const dataMaster = sheetMaster.getDataRange().getValues();
+//         for (let i = 1; i < dataMaster.length; i++) {
+//           // Cek apakah plat nomor di Master_Armada ada di dalam teks unitMobil
+//           if (unitMobil.indexOf(dataMaster[i][0]) !== -1) { 
+//             sheetMaster.getRange(i + 1, 5).setValue("In Use"); //
+//             break;
+//           }
+//         }
+//       }
+//     }
+//     // =======================================================
+
+//     if (noWaPemohon) {
+//       let pesanWA = "";
+//       if (action === "approve") {
+//         pesanWA = `✅ *PERMOHONAN DISETUJUI*\n\nHalo *${namaPIC}*,\nPermohonan mobil *${unitMobil}* Anda telah *DISETUJUI*.\n\nSelamat bertugas!`;
+//       } else {
+//         pesanWA = `❌ *PERMOHONAN DITOLAK*\n\nHalo *${namaPIC}*,\nMohon maaf, permohonan mobil *${unitMobil}* Anda *DITOLAK*.\n*Alasan:* ${reason}`;
+//       }
+//       kirimWAWatzap(noWaPemohon, pesanWA);
+//     }
+
+//     kirimEmailFinal_(row, status, reason);
+
+//     return HtmlService.createHtmlOutput(`
+//       <div style="font-family:sans-serif;text-align:center;padding-top:50px;">
+//         <div style="display:inline-block;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+//           <h2 style="color:#28a745;">✅ BERHASIL!</h2>
+//           <p>Status baris <b>${row}</b> sudah di-update menjadi <b>${status}</b>.</p>
+//           <p>Status mobil di Master Armada juga telah diperbarui.</p>
+//           <p>Anda bisa menutup halaman ini.</p>
+//         </div>
+//       </div>`);
+//   } catch (err) {
+//     return HtmlService.createHtmlOutput("<b>ERROR:</b> " + err.message);
+//   }
+// }
+
+/************************************************************
+ * 3. RENDER FORM REJECT
+ ************************************************************/
+function renderReasonForm(row) {
+  const url = ScriptApp.getService().getUrl();
+  return HtmlService.createHtmlOutput(`
+    <div style="font-family:sans-serif;padding:20px;max-width:400px;margin:auto;border:1px solid #ddd;border-radius:10px;">
+      <form action="${url}" method="get">
+        <h3 style="color:#d93025;">Alasan Penolakan</h3>
+        <p>Anda akan menolak permintaan pada baris <b>${row}</b>.</p>
+        <input type="hidden" name="action" value="reject"><input type="hidden" name="row" value="${row}">
+        <textarea name="reason" rows="4" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ccc;" placeholder="Tulis alasan di sini..." required></textarea><br><br>
+        <button type="submit" style="background:#d93025; color:white; border:none; padding:10px 20px; cursor:pointer; width:100%; font-weight:bold; border-radius:5px;">Kirim Penolakan</button>
+      </form>
+    </div>`).setTitle("Form Penolakan");
+}
+
+/************************************************************
+ * 4. (CHECK BENTROK & EMAIL)
+ ************************************************************/
+function checkJadwalBentrok(mobilReq, tglMulaiReq, tglSelesaiReq, currentRow) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  const startReq = new Date(tglMulaiReq).getTime();
+  const endReq = new Date(tglSelesaiReq).getTime();
+  if (isNaN(startReq)) return { bentrok: false };
+
+  for (let i = 1; i < data.length; i++) {
+    if ((i + 1) === currentRow) continue; 
+    if (data[i][COL_STATUS_FINAL - 1] === "Approved") {
+      let mobilDiSheet = data[i][COL_PILIH_KENDARAAN - 1].toString().split(" (")[0].replace("⚠️ ", "").replace("✅ ", "").trim();
+      const startSheet = new Date(data[i][COL_TGL_BERANGKAT - 1]).getTime();
+      const endSheet = new Date(data[i][COL_TGL_KEPULANGAN - 1]).getTime();
+      if (mobilDiSheet === mobilReq && startReq < endSheet && endReq > startSheet) {
+        return { bentrok: true, pic: data[i][COL_NAMA_PEMOHON - 1], tgl: Utilities.formatDate(new Date(startSheet), "GMT+7", "dd/MM HH:mm") };
+      }
+    }
+  }
+  return { bentrok: false };
+}
+
+function sendApprovalToLv1_(d) {
+  const approveUrl = `${WEBAPP_URL}?action=approve&row=${d.row}`;
+  const rejectUrl  = `${WEBAPP_URL}?action=reject&row=${d.row}`;
+  
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
+      <h3 style="color: #004a99; border-bottom: 2px solid #004a99; padding-bottom: 10px;">Permohonan Kendaraan</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr><td style="padding:8px 0; font-weight:bold; width:120px;">PIC</td><td>: ${d.namaPIC}</td></tr>
+        <tr><td style="padding:8px 0; font-weight:bold;">Unit Kerja</td><td>: ${d.unitKerja}</td></tr>
+        <tr style="background:#f9f9f9;"><td style="padding:8px 0; font-weight:bold;">Mobil</td><td style="color:#d93025; font-weight:bold;">: ${d.nomorKendaraan}</td></tr>
+        <tr><td style="padding:8px 0; font-weight:bold;">Waktu</td><td>: ${d.tglBerangkat} s.d. ${d.tglKepulangan}</td></tr>
+        <tr style="background:#f9f9f9;"><td style="padding:8px 0; font-weight:bold;">Tujuan</td><td>: ${d.tujuan}</td></tr>
+        <tr><td style="padding:8px 0; font-weight:bold;">Tamu</td><td>: ${d.daftarTamu}</td></tr>
+        <tr><td style="padding:8px 0; font-weight:bold;">Hotel</td><td>: ${d.hotel || "-"}</td></tr>
+      </table>
+      <div style="margin-top:25px; text-align:center;">
+        <a href="${approveUrl}" style="background:#28a745; color:white; padding:12px 25px; text-decoration:none; border-radius:5px; font-weight:bold; margin-right:10px;">APPROVE</a>
+        <a href="${rejectUrl}" style="background:#dc3545; color:white; padding:12px 25px; text-decoration:none; border-radius:5px; font-weight:bold;">REJECT</a>
+      </div>
+    </div>`;
+
+  MailApp.sendEmail({ to: LV1_APPROVER_EMAILS, cc: CC_EMAIL, subject: `[REQUEST] Mobil: ${d.namaPIC} - ${d.unitKerja}`, htmlBody: htmlBody });
+}
+
+function kirimEmailFinal_(row, status, reason) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const vals = sheet.getRange(row, 1, 1, 20).getValues()[0];
+  const email = vals[COL_EMAIL_PEMOHON-1];
+  const pic = vals[COL_NAMA_PEMOHON-1];
+  
+  // Menentukan teks status untuk subjek agar pasti sesuai dengan input
+  var statusTeks = status || "Update"; 
+
+  const htmlBody = `
+    <div style="font-family:Arial; padding:20px; border:1px solid #ddd;">
+      <h3>Status Permohonan Mobil: <span style="color:${status==='Approved'?'#28a745':'#dc3545'};">${status}</span></h3>
+      <p>Halo <b>${pic}</b>,</p>
+      <p>Permohonan kendaraan Anda telah diperbarui menjadi <b>${status}</b>.</p>
+      ${reason ? `<p style="background:#f2f2f2; padding:10px; border-left:4px solid #dc3545;"><b>Alasan:</b> ${reason}</p>` : ""}
+      <p>Terima kasih.</p>
+    </div>`;
+  
+  MailApp.sendEmail({ 
+    to: email, 
+    subject: "[" + statusTeks + "] Status Peminjaman Mobil", 
+    htmlBody: htmlBody 
+  });
+}
+
+/************************************************************
+ * 3. SCHEDULER: UPDATE DROPDOWN FORM
+ ************************************************************/
+// function filterMobilTersedia() {
+//   const ss = SpreadsheetApp.getActiveSpreadsheet();
+//   const masterSheet = ss.getSheetByName('Master_Mobil');
+//   const requestSheet = ss.getSheetByName('Request Mobil');
+//   const logSheet = ss.getSheetByName('Log_Scheduler');
+//   const form = FormApp.openById(FORM_ID); 
+  
+//   const sekarang = new Date();
+//   const masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 1).getValues();
+//   const listMobilMaster = masterData.map(row => row[0].toString().trim()).filter(String);
+//   const dataRequest = requestSheet.getDataRange().getValues();
+  
+//   let statusMobilMap = {}; 
+//   let mobilTerpakai = [];
+  
+//   // cek masa depan: 48 Jam agar user tahu jadwal besok
+//   const rentangMasaDepan = new Date(sekarang.getTime() + (48 * 60 * 60 * 1000)); 
+
+//   for (let i = 1; i < dataRequest.length; i++) {
+//     const statusFinal = dataRequest[i][COL_STATUS_FINAL - 1];
+//     const tglMulaiRaw = dataRequest[i][COL_TGL_BERANGKAT - 1];
+//     const tglSelesaiRaw = dataRequest[i][COL_TGL_KEPULANGAN - 1];
+    
+//     const tglMulai = new Date(tglMulaiRaw);
+//     const tglSelesai = new Date(tglSelesaiRaw);
+    
+//     const noMobil = dataRequest[i][COL_PILIH_KENDARAAN - 1].toString()
+//                     .split(" (")[0]
+//                     .replace("⚠️ ", "")
+//                     .replace("✅ ", "")
+//                     .trim();
+
+//     if (statusFinal === "Approved" && !isNaN(tglMulai.getTime())) {
+      
+//       // KONDISI 1: MOBIL SEDANG DIGUNAKAN SAAT INI
+//       if (sekarang >= tglMulai && sekarang <= tglSelesai) {
+//         statusMobilMap[noMobil] = "SEDANG JALAN s.d. " + Utilities.formatDate(tglSelesai, "GMT+7", "dd/MM HH:mm");
+//         if (!mobilTerpakai.includes(noMobil)) mobilTerpakai.push(noMobil);
+//       } 
+      
+//       // KONDISI 2: MOBIL SUDAH DI-BOOKED UNTUK JADWAL MENDATANG (Dalam 48 Jam)
+//       else if (tglMulai > sekarang && tglMulai <= rentangMasaDepan) {
+//         if (!statusMobilMap[noMobil]) {
+//           statusMobilMap[noMobil] = "BOOKED " + 
+//                                     Utilities.formatDate(tglMulai, "GMT+7", "dd/MM HH:mm") + 
+//                                     " s.d. " + 
+//                                     Utilities.formatDate(tglSelesai, "GMT+7", "dd/MM HH:mm");
+//           if (!mobilTerpakai.includes(noMobil)) mobilTerpakai.push(noMobil);
+//         }
+//       }
+//     }
+//   }
+
+//   // Membuat daftar tampilan baru untuk dropdown
+//   const listTampilanBaru = listMobilMaster.map(mobil => {
+//     if (statusMobilMap[mobil]) {
+//       return `⚠️ ${mobil} (${statusMobilMap[mobil]})`;
+//     }
+//     return `✅ ${mobil} (Tersedia)`;
+//   });
+
+//   const item = form.getItems(FormApp.ItemType.LIST).find(i => i.getTitle().trim() === "Pilih Kendaraan");
+//   let statusUpdate = "Failed: Item Not Found";
+  
+//   if (item) {
+//     item.asListItem().setChoiceValues(listTampilanBaru);
+//     statusUpdate = "Success";
+//   }
+
+//   if (logSheet) {
+//     logSheet.appendRow([
+//       sekarang, 
+//       statusUpdate, 
+//       mobilTerpakai.join(", ") || "Semua Tersedia", 
+//       "Update otomatis dropdown"
+//     ]);
+//   }
+// }
+
+function filterMobilTersedia() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const masterSheet = ss.getSheetByName('Master_Mobil');
+  const requestSheet = ss.getSheetByName('Request Mobil');
+  const armadaSheet = ss.getSheetByName('Master_Armada'); 
+  const logSheet = ss.getSheetByName('Log_Scheduler');
+  const form = FormApp.openById(FORM_ID); 
+  
+  const sekarang = new Date();
+  const masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 1).getValues();
+  const listMobilMaster = masterData.map(row => row[0].toString().trim()).filter(String);
+  const dataRequest = requestSheet.getDataRange().getValues();
+
+  // --- 1. AMBIL STATUS REAL-TIME ---
+  const dataArmada = armadaSheet.getDataRange().getValues();
+  let statusRealTimeMap = {};
+  for (let j = 1; j < dataArmada.length; j++) {
+    const plat = dataArmada[j][0].toString().trim();
+    const jenis = dataArmada[j][1].toString().trim();
+    const gabungan = jenis + " - " + plat;
+    const status = dataArmada[j][4] ? dataArmada[j][4].toString().trim() : "";
+    statusRealTimeMap[gabungan] = status;
   }
+  
+  let statusMobilMap = {}; 
+  let mobilTerpakai = [];
+  // Tingkatkan rentang masa depan ke 7 hari (168 jam) sesuai request Abang sebelumnya
+  const rentangMasaDepan = new Date(sekarang.getTime() + (168 * 60 * 60 * 1000)); 
 
-  const row = parseInt(rowStr, 10);
-  if (isNaN(row)) {
-    return ContentService.createTextOutput('Row tidak valid.');
-  }
+  for (let i = 1; i < dataRequest.length; i++) {
+    const statusFinal = dataRequest[i][COL_STATUS_FINAL - 1];
+    const tglMulaiRaw = dataRequest[i][COL_TGL_BERANGKAT - 1];
+    const tglSelesaiRaw = dataRequest[i][COL_TGL_KEPULANGAN - 1];
+    
+    const tglMulai = new Date(tglMulaiRaw);
+    const tglSelesai = new Date(tglSelesaiRaw);
+    
+    const noMobil = dataRequest[i][COL_PILIH_KENDARAAN - 1].toString()
+                    .split(" (")[0]
+                    .replace("⚠️ ", "")
+                    .replace("✅ ", "")
+                    .trim();
 
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    return ContentService.createTextOutput('Sheet "' + SHEET_NAME + '" tidak ditemukan.');
-  }
-
-  const newStatus =
-    action === 'approve' ? 'Approved' :
-    action === 'reject'  ? 'Rejected' : 'Unknown';
-
-  // --- Baca data baris (dipakai untuk email notifikasi) ---
-  const lastCol = sheet.getLastColumn();
-  const data    = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
-
-  const emailPengaju     = data[COL_EMAIL_PENGAJU  - 1];
-  const namaPIC          = data[COL_NAMA_PIC       - 1];
-  const dasarSurat       = data[COL_DASAR_SURAT    - 1];
-  const tglBerangkat     = data[COL_TGL_BERANGKAT  - 1];
-  const tglKepulangan    = data[COL_TGL_KEPULANGAN - 1];
-  const unitKerja        = data[COL_UNIT_KERJA     - 1];
-
-  // =======================
-  // LEVEL 1 
-  // =======================
-  if (level === 1) {
-    sheet.getRange(row, COL_STATUS_LV1).setValue(newStatus);
-
-    if (newStatus === 'Rejected') {
-      sheet.getRange(row, COL_STATUS_FINAL).setValue('Rejected');
-      if (emailPengaju) {
-        kirimEmailKePemohon(row, 'Rejected');
+    if (statusFinal === "Approved" && !isNaN(tglMulai.getTime())) {
+      
+      // --- 2. CEK APAKAH MOBIL SEHARUSNYA JALAN (DIPERTJAM) ---
+      // Syarat: Waktu sekarang sudah masuk jadwal DAN status fisik bukan Available
+      if (sekarang >= tglMulai && sekarang <= tglSelesai) {
+        if (statusRealTimeMap[noMobil] !== "Available") {
+          statusMobilMap[noMobil] = "SEDANG JALAN s.d. " + Utilities.formatDate(tglSelesai, "GMT+7", "dd/MM HH:mm");
+          if (!mobilTerpakai.includes(noMobil)) mobilTerpakai.push(noMobil);
+        }
+      } 
+      
+      // --- 3. CEK APAKAH MOBIL DI-BOOKED (DIPERBAIKI) ---
+      // Jika Approved tapi waktu sekarang BELUM masuk jam jalan, masuk kategori BOOKED
+      else if (tglMulai > sekarang && tglMulai <= rentangMasaDepan) {
+        if (!statusMobilMap[noMobil]) {
+          statusMobilMap[noMobil] = "BOOKED " + 
+                                    Utilities.formatDate(tglMulai, "GMT+7", "dd/MM HH:mm") + 
+                                    " s.d. " + 
+                                    Utilities.formatDate(tglSelesai, "GMT+7", "dd/MM HH:mm");
+          if (!mobilTerpakai.includes(noMobil)) mobilTerpakai.push(noMobil);
+        }
       }
     }
-   if (newStatus === 'Approved') {
+  }
 
-  const approveUrlLv2 = `${WEBAPP_URL}?action=approve&row=${row}&level=2`;
-  const rejectUrlLv2  = `${WEBAPP_URL}?action=reject&row=${row}&level=2`;
+  // --- 4. BANGUN LIST TAMPILAN BARU ---
+  const listTampilanBaru = listMobilMaster.map(mobil => {
+    const statusFisik = statusRealTimeMap[mobil];
+    const statusJadwal = statusMobilMap[mobil];
 
-  const subjectLv2 = `Approval LV2 Permohonan Mobil dari ${namaPIC || ''}`;
-  const htmlLv2 = `
-    <p>Yth. Approver Level 2,</p>
-    <p>Mohon approval permohonan mobil berikut (telah di-approve Koordinator):</p>
-    <ul>
-      <li>Nama PIC: ${namaPIC || '-'}</li>
-      <li>Unit Kerja: ${unitKerja || '-'}</li>
-      <li>Dasar Surat: ${dasarSurat || '-'}</li>
-      <li>Tanggal: ${tglBerangkat || '-'} s/d ${tglKepulangan || '-'}</li>
-    </ul>
-    <p>
-      <a href="${approveUrlLv2}">✅ APPROVE </a>&nbsp;&nbsp;&nbsp;
-      <a href="${rejectUrlLv2}">❌ REJECT </a>
-    </p>
-  `;
+    if (statusFisik === "Available") {
+      if (statusJadwal && statusJadwal.includes("BOOKED")) {
+        return `⚠️ ${mobil} (${statusJadwal})`;
+      }
+      return `✅ ${mobil} (Tersedia)`;
+    }
 
-  MailApp.sendEmail({
-    to: LV2_APPROVER_EMAILS,   
-    subject: subjectLv2,
-    htmlBody: htmlLv2
+    if (statusJadwal) {
+      return `⚠️ ${mobil} (${statusJadwal})`;
+    }
+
+    return `✅ ${mobil} (Tersedia)`;
   });
-}
 
-
-  // =======================
-  // LEVEL 2 
-  // =======================
-  } else if (level === 2) {
-    sheet.getRange(row, COL_STATUS_LV2).setValue(newStatus);
-
-    sheet.getRange(row, COL_STATUS_FINAL).setValue(newStatus);
-
-    if (emailPengaju) {
-      kirimEmailKePemohon(row, newStatus);
-    }
-  }
-  const html = HtmlService.createHtmlOutput(
-    '<html><body style="font-family:Arial;padding:20px;">' +
-    '<h3>Approval level ' + level + ' telah di-' + newStatus + '.</h3>' +
-    '<p>Anda dapat menutup halaman ini.</p>' +
-    '</body></html>'
-  );
-
-  return html;
-}
-
-
-// Ambil semua mobil dari sheet "Daftar Mobil"
-function getAllCars() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('Daftar Mobil');
-  if (!sheet) return [];
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return [];
-  const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues()
-    .map(r => r[0])
-    .filter(v => v && v !== '');
-  return data;
-}
-
-// Ambil mobil yang AVAILABLE 
-function getAvailableCars(startIso, endIso) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const reqSheet = ss.getSheetByName(SHEET_NAME);
-
-  const allCars = getAllCars();
-  if (!startIso || !endIso) {
-    return allCars;
+  const item = form.getItems(FormApp.ItemType.LIST).find(i => i.getTitle().trim() === "Pilih Kendaraan");
+  let statusUpdate = "Failed: Item Not Found";
+  
+  if (item) {
+    item.asListItem().setChoiceValues(listTampilanBaru);
+    statusUpdate = "Success";
   }
 
-  const start = new Date(startIso);
-  const end   = new Date(endIso);
-
-  const used = new Set();
-
-  const data = reqSheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const car         = row[COL_NO_KENDARAAN   - 1];
-    const statusFinal = row[COL_STATUS_FINAL   - 1];
-    const existStart  = row[COL_TGL_BERANGKAT  - 1];
-    const existEnd    = row[COL_TGL_KEPULANGAN - 1];
-
-    if (!car) continue;
-    if (statusFinal !== 'Approved') continue;
-    if (!(existStart instanceof Date) || !(existEnd instanceof Date)) continue;
-
-    // cek overlap: existingStart < end && existingEnd > start
-    if (existStart < end && existEnd > start) {
-      used.add(String(car));
-    }
+  if (logSheet) {
+    logSheet.appendRow([
+      sekarang, 
+      statusUpdate, 
+      mobilTerpakai.join(", ") || "Semua Tersedia", 
+      "Update otomatis dropdown (Fix Loncatan Waktu)"
+    ]);
   }
-
-  const available = allCars.filter(c => !used.has(String(c)));
-  return available;
 }
+/***********
+ * WA NYA 
+ * 
+ * 
+ * ***********/
+function kirimWAWatzap(noHP, pesan) {
+  if (!noHP) return;
+  
+  // Membersihkan karakter non-angka
+  let formattedNo = noHP.toString().replace(/[^0-9]/g, "");
+  
+  // Otomatis ubah 08xxx menjadi 628xxx
+  if (formattedNo.startsWith("0")) {
+    formattedNo = "62" + formattedNo.slice(1);
+  }
 
-// Submit data dari Web App ke sheet & kirim email approval LV1
-function submitRequest(form) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SHEET_NAME);
+  const url = "https://api.watzap.id/v1/send_message";
+  const payload = {
+    "api_key": "V3ELWOCBWBWHDEMX",
+    "number_key": "VcgcGA4Tq9FkpwMJ",
+    "phone_no": formattedNo,
+    "message": pesan
+  };
 
-  const now = new Date();
+  const options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
 
-  const rowValues = [
-    now,                            
-    form.dasarSurat || '',          
-    new Date(form.tglBerangkat),    
-    new Date(form.tglKepulangan),   
-    form.noKendaraan || '',         
-    form.emailPengaju || '',        
-    form.unitKerja || '',           
-    form.driver || '',              
-    form.daftarTamu || '',          
-    form.tujuan || '',              
-    form.hotel || '',               
-    form.jumlahHari || '',          
-    form.biaya || '',               
-    form.namaPIC || '',             
-    '',                             
-    '',                             
-    ''                              
-  ];
-
-  sheet.appendRow(rowValues);
-  const newRowIndex = sheet.getLastRow();
-
-  // kirim email ke approver level 1 
-  sendEmailForRow(newRowIndex);
-
-  // kirim email WA link ke pemohon seperti di onFormSubmit 
-  const dasarSurat       = form.dasarSurat || '';
-  const tglBerangkat     = form.tglBerangkat || '';
-  const tglKepulangan    = form.tglKepulangan || '';
-  const nomorKendaraan   = form.noKendaraan || '';
-  const emailPengaju     = form.emailPengaju || '';
-  const unitKerja        = form.unitKerja || '';
-  const namaPIC          = form.namaPIC || '';
-
-  const waMessage =
-    'Yth. Koordinator,\n\n' +
-    'Saya ' + (namaPIC || '-') + ' dari ' + (unitKerja || '-') + ' mengajukan permohonan penggunaan mobil.\n\n' +
-    'Dasar Surat : ' + (dasarSurat || '-') + '\n' +
-    'Tanggal     : ' + (tglBerangkat || '-') + ' s/d ' + (tglKepulangan || '-') + '\n' +
-    'Nomor Kendaraan (jika ada) : ' + (nomorKendaraan || '-') + '\n\n' +
-    'Mohon konfirmasi persetujuan. Terima kasih.';
-
-  const waLink = generateWaLink(KOOR_WA_NUMBER, waMessage);
-
-  if (emailPengaju) {
-    const subjectPemohon = 'Link WhatsApp ke Koordinator - Permohonan Mobil';
-    const htmlPemohon = `
-      <p>Yth. ${namaPIC || 'Pemohon'},</p>
-      <p>Terima kasih sudah mengisi form permohonan penggunaan mobil.</p>
-      <p>Jika ingin <b>mengirim reminder ke Koordinator via WhatsApp</b>, silakan klik link berikut:</p>
-      <p><a href="${waLink}" target="_blank">📲 Kirim WhatsApp ke Koordinator</a></p>
-    `;
-
-    MailApp.sendEmail({
-      to: emailPengaju,
-      subject: subjectPemohon,
-      htmlBody: htmlPemohon
-    });
-  }
-
-  return 'Permohonan berhasil disimpan. Email approval sudah dikirim ke Koordinator.';
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    console.log("Respon Watzap: " + response.getContentText());
+  } catch (e) {
+    console.error("Gagal kirim WA: " + e.message);
+  }
 }
 
 
-function onEdit(e) {
-  const sheet = e.range.getSheet();
-  if (sheet.getName() !== SHEET_NAME) return;
+/***************************************/
+function buatDashboardOtomatis() {  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();  
+  let dash = ss.getSheetByName('DASHBOARD_MONITORING');  
+    
+  if (!dash) {  
+    dash = ss.insertSheet('DASHBOARD_MONITORING');  
+  } else {  
+    dash.clear(); 
+  }  
 
-  const row = e.range.getRow();
-  const col = e.range.getColumn();
+  // 1. HEADER & JUDUL
+  dash.getRange("A1:H1").merge()  
+    .setValue("FLEET MONITORING DASHBOARD")  
+    .setFontSize(18).setFontWeight("bold")  
+    .setBackground("#004a99").setFontColor("white")  
+    .setHorizontalAlignment("center").setVerticalAlignment("middle");  
+    
+  dash.getRange("A2").setValue("Terakhir Update:").setFontWeight("bold");  
+  dash.getRange("B2").setValue(new Date()).setNumberFormat("dd/MM/yyyy HH:mm");  
 
-  // hanya trigger kalau yang diubah adalah kolom Status Final
-  if (row === 1 || col !== COL_STATUS_FINAL) return;
+  // 2. KOTAK STATISTIK (CARD) - Menggunakan Titik Koma (;) langsung untuk Region Indonesia
+  dash.getRange("A4").setValue("Total Armada");
+  dash.getRange("B4").setFormula("=COUNTA(Master_Mobil!A2:A)");
+  dash.getRange("A5").setValue("Unit In-Use");
+  dash.getRange("B5").setFormula("=COUNTIF(Master_Armada!E:E; \"In Use\")");
+  dash.getRange("A6").setValue("Unit Available");
+  dash.getRange("B6").setFormula("=COUNTIF(Master_Armada!E:E; \"Available\")");
 
-  const newValue = (e.value || '').toString().trim();
+  // 3. TABEL UTAMA (HEADER)  
+  dash.getRange("A8").setValue("LIST UNIT MOBIL").setFontWeight("bold").setBackground("#eeeeee").setHorizontalAlignment("center"); 
+  dash.getRange("B8").setFormula("=TODAY()").setNumberFormat("dd/MM (ddd)");  
+  dash.getRange("C8:H8").setFormula("=B8+1");  
+  dash.getRange("B8:H8").setFontWeight("bold").setBackground("#eeeeee").setHorizontalAlignment("center");  
 
-  if (newValue === 'Approved' || newValue === 'Rejected') {
-    kirimEmailKePemohon(row, newValue);
-  }
+  // 4. ISI NAMA MOBIL
+  dash.getRange("A9").setFormula("=QUERY(Master_Mobil!A2:A; \"SELECT A WHERE A IS NOT NULL\")");  
+
+  // 5. RUMUS JADWAL (MENGGUNAKAN TITIK KOMA ; )
+  // Saya sederhanakan rumusnya agar tidak memicu 'Formula Parse Error' lagi.
+  const rumusJadwal = "=ARRAYFORMULA(IF(A9:A=\"\"; \"\"; IFERROR(MAP(A9:A; LAMBDA(m; MAP(B8:H8; LAMBDA(t; IF(COUNTIFS('Request Mobil'!$E:$E; m; 'Request Mobil'!$S:$S; \"Approved\"; INT('Request Mobil'!$C:$C); t)>0; \"🔴 BOOKED\"; \"✅ AVAILABLE\"))))); \"✅ AVAILABLE\")))";
+  
+  dash.getRange("B9").setFormula(rumusJadwal);  
+
+  // 6. WARNA OTOMATIS
+  dash.clearConditionalFormatRules();
+  const rangeJadwal = dash.getRange("B9:H35");
+  const ruleHijau = SpreadsheetApp.newConditionalFormatRule().whenTextContains("✅ AVAILABLE").setBackground("#d4edda").setFontColor("#155724").setRanges([rangeJadwal]).build();
+  const ruleMerah = SpreadsheetApp.newConditionalFormatRule().whenTextContains("🔴 BOOKED").setBackground("#f8d7da").setFontColor("#721c24").setRanges([rangeJadwal]).build();
+  dash.setConditionalFormatRules([ruleHijau, ruleMerah]);
+
+  // 7. FINISHING
+  dash.setColumnWidth(1, 200); 
+  dash.setColumnWidths(2, 7, 120); 
+  dash.getRange("A8:H35").setBorder(true, true, true, true, true, true, "#cccccc", SpreadsheetApp.BorderStyle.SOLID);  
+  dash.getRange("A9:H35").setVerticalAlignment("middle").setHorizontalAlignment("center");
+  
+  // FIX: Menggunakan ss.setHideGridlines(true) atau dash.setHideGridlines(true) tergantung versi Apps Script
+  // Jika masih error, hapus baris di bawah ini karena hanya opsional (tampilan)
+  try { dash.setHideGridlines(true); } catch(e) { }
+
+  Browser.msgBox("✅ DASHBOARD SELESAI DIPERBAIKI!");
 }
-
 
 /************************************************************
- * TRIGGER: FORM SUBMIT → EMAIL PIC + WA 
- ************************************************************/
+ * MENU KUSTOM: 
+ ************************************************************/
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🚗 Update Sistem') 
+      .addItem('🔄 Update Dropdown Mobil', 'filterMobilTersedia')
+.addItem('🚀 Buat Dashboard Otomatis', 'buatDashboardOtomatis')
+      .addSeparator()
+      .addItem('⚙️ Cek Otorisasi WA', 'cekOtorisasiManual')
+      .addToUi();
+}
 
-function onFormSubmit(e) {
-  const sheet = e.range.getSheet();
+/** * Fungsi pembantu untuk memicu permintaan izin jika 
+ * tombol menu di Sheets tidak jalan 
+ */
+function cekOtorisasiManual() {
+  Browser.msgBox("Otorisasi Berhasil", "Sistem sudah memiliki izin untuk menjalankan script.", Browser.Buttons.OK);
+}
 
-  if (sheet.getName() !== SHEET_NAME) return;
+// ==========================================
+// DRIVER ROLE
+// ==========================================
+function updateFormDropdown() {
+  // 1. ID Google Form abang (ambil dari URL saat edit Form)
+  const formId = "10_a-XaPZ_U4Ql-Z-R03Z239Yi6J3heP0a_W4MckC1OQ"; 
+  const form = FormApp.openById(formId);
+  
+  // 2. Nama Sheet dan Range data mobil
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetMaster = ss.getSheetByName("Master_Armada"); 
+  const data = sheetMaster.getRange("A2:A" + sheetMaster.getLastRow()).getValues();
+  
+  // 3. Ubah data jadi list satu baris
+  const listMobil = data.map(row => row[0]).filter(item => item !== "");
+  
+  // 4. Cari pertanyaan Dropdown di Form (berdasarkan judulnya)
+  const items = form.getItems();
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].getTitle() === "Pilih Unit Mobil") { // Sesuaikan dengan judul di Form
+      items[i].asListItem().setChoiceValues(listMobil);
+      break;
+    }
+  }
+}
 
-  const row = e.range.getRow();
-  const values = e.values;
+/*************** */
+function onFormSubmitDriver(e) {
+  if (!e || !e.values) {
+    Logger.log("Gagal: Tidak ada data form yang masuk");
+    return;
+  }
 
-  const dasarSurat       = values[COL_DASAR_SURAT    - 1];
-  const tglBerangkat     = values[COL_TGL_BERANGKAT  - 1];
-  const tglKepulangan    = values[COL_TGL_KEPULANGAN - 1];
-  const nomorKendaraan   = values[COL_NO_KENDARAAN   - 1];
-  const emailPengaju     = values[COL_EMAIL_PENGAJU  - 1];
-  const unitKerja        = values[COL_UNIT_KERJA     - 1];
-  const driver           = values[COL_DRIVER         - 1];
-  const daftarTamu       = values[COL_DAFTAR_TAMU    - 1];
-  const tujuanPerjalanan = values[COL_TUJUAN         - 1];
-  const hotelMenginap    = values[COL_HOTEL          - 1];
-  const jumlahHari       = values[COL_JUMLAH_HARI    - 1];
-  const biayaPelayanan   = values[COL_BIAYA          - 1];
-  const namaPIC          = values[COL_NAMA_PIC       - 1];
+  const responses = e.values;
+  const platNomor = responses[1].toString().trim(); 
+  const kmAkhir = responses[2]; 
 
-  sendEmailForRow(row);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const armadaSheet = ss.getSheetByName('Master_Armada');
+  const data = armadaSheet.getDataRange().getValues();
 
-  const waMessage =
-    'Yth. Koordinator,\n\n' +
-    'Saya ' + (namaPIC || '-') + ' dari ' + (unitKerja || '-') + ' mengajukan permohonan penggunaan mobil.\n\n' +
-    'Dasar Surat : ' + (dasarSurat || '-') + '\n' +
-    'Tanggal     : ' + (tglBerangkat || '-') + ' s/d ' + (tglKepulangan || '-') + '\n' +
-    'Tujuan      : ' + (tujuanPerjalanan || '-') + '\n' +
-    'Nomor Kendaraan (jika ada) : ' + (nomorKendaraan || '-') + '\n\n' +
-    'Mohon konfirmasi persetujuan. Terima kasih.';
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0].toString().trim() === platNomor) {
+      armadaSheet.getRange(i + 1, 5).setValue("Available");
+      armadaSheet.getRange(i + 1, 6).setValue(kmAkhir);
+      
+      SpreadsheetApp.flush(); // PAKSA Google Sheets menulis data sekarang juga
+      Logger.log("Berhasil Update Status untuk: " + platNomor);
+      
+      filterMobilTersedia(); 
+      return;
+    }
+  }
+}
 
-  const waLink = generateWaLink(KOOR_WA_NUMBER, waMessage);
 
-  if (emailPengaju && emailPengaju !== '') {
-    const subjectPemohon = 'Link WhatsApp ke Koordinator - Permohonan Mobil';
-    const htmlPemohon = `
-      <p>Yth. ${namaPIC || 'Pemohon'},</p>
-      <p>Terima kasih sudah mengisi form permohonan penggunaan mobil.</p>
-      <p>Jika ingin <b>mengirim reminder ke Koordinator via WhatsApp</b>, silakan klik link berikut:</p>
-      <p><a href="${waLink}" target="_blank">📲 Kirim WhatsApp ke Koordinator</a></p>
-      <p>Pesan WhatsApp akan otomatis terisi, Anda hanya perlu menekan tombol <b>Send</b> di aplikasi WhatsApp.</p>
-    `;
+/*****************
+* reset master armada mobil yang dipakai
+*****************/
+function autoResetStatusMobil() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const requestSheet = ss.getSheetByName('Request Mobil');
+  const armadaSheet = ss.getSheetByName('Master_Armada');
+  const data = requestSheet.getDataRange().getValues();
+  const sekarang = new Date();
 
-    MailApp.sendEmail({
-      to: emailPengaju,
-      subject: subjectPemohon,
-      htmlBody: htmlPemohon
-    });
+  for (let i = 1; i < data.length; i++) {
+    const tglSelesai = new Date(data[i][COL_TGL_KEPULANGAN - 1]);
+    const statusFinal = data[i][COL_STATUS_FINAL - 1];
+    const unitMobil = data[i][COL_PILIH_KENDARAAN - 1].toString();
+
+    if (statusFinal === "Approved" && (sekarang.getTime() - tglSelesai.getTime()) > (12 * 60 * 60 * 1000)) {
+       updateStatusFisik(unitMobil, "Available");
+    }
   }
+}
+
+function updateStatusFisik(namaUnit, statusBaru) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const armadaSheet = ss.getSheetByName('Master_Armada');
+  const data = armadaSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (namaUnit.indexOf(data[i][0]) !== -1) {
+      armadaSheet.getRange(i + 1, 5).setValue(statusBaru);
+      break;
+    }
+  }
+}
+
+
+/*****************
+ * 
+ * 
+ */
+function setupSemuaTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => ScriptApp.deleteTrigger(t));
+  
+  // 1. Trigger saat ada pengajuan baru (Pemohon)
+  ScriptApp.newTrigger('onFormSubmit')
+    .forSpreadsheet(SpreadsheetApp.getActive())
+    .onFormSubmit()
+    .create();
+    
+  // 2. Trigger Update Dropdown Mobil tiap 15 menit
+  ScriptApp.newTrigger('filterMobilTersedia')
+    .timeBased()
+    .everyMinutes(15)
+    .create();
+
+  // 3. Trigger Pembersih Otomatis tiap 4 jam
+  ScriptApp.newTrigger('autoResetStatusMobil')
+    .timeBased()
+    .everyHours(4)
+    .create();
+    
+  Browser.msgBox("✅ Berhasil! Semua trigger (termasuk Pembersih Otomatis) telah dipasang.");
 }
