@@ -508,7 +508,7 @@ function filterMobilTersedia() {
       sekarang, 
       statusUpdate, 
       mobilTerpakai.join(", ") || "Semua Tersedia", 
-      "Update otomatis dropdown (Fix Loncatan Waktu)"
+      "Update otomatis dropdown (Refresh Ulang Form)"
     ]);
   }
 }
@@ -563,9 +563,9 @@ function buatDashboardOtomatis() {
     dash.clear(); 
   }  
 
-  // 1. HEADER & JUDUL
-  dash.getRange("A1:H1").merge()  
-    .setValue("FLEET MONITORING DASHBOARD")  
+  // --- BAGIAN 1: HEADER & STATISTIK RINGKAS ---
+  dash.getRange("A1:L1").merge()  
+    .setValue("FLEET MONITORING & PERFORMANCE DASHBOARD")  
     .setFontSize(18).setFontWeight("bold")  
     .setBackground("#004a99").setFontColor("white")  
     .setHorizontalAlignment("center").setVerticalAlignment("middle");  
@@ -573,7 +573,7 @@ function buatDashboardOtomatis() {
   dash.getRange("A2").setValue("Terakhir Update:").setFontWeight("bold");  
   dash.getRange("B2").setValue(new Date()).setNumberFormat("dd/MM/yyyy HH:mm");  
 
-  // 2. KOTAK STATISTIK (CARD) - Menggunakan Titik Koma (;) langsung untuk Region Indonesia
+  // Kotak Statistik Atas
   dash.getRange("A4").setValue("Total Armada");
   dash.getRange("B4").setFormula("=COUNTA(Master_Mobil!A2:A)");
   dash.getRange("A5").setValue("Unit In-Use");
@@ -581,39 +581,70 @@ function buatDashboardOtomatis() {
   dash.getRange("A6").setValue("Unit Available");
   dash.getRange("B6").setFormula("=COUNTIF(Master_Armada!E:E; \"Available\")");
 
-  // 3. TABEL UTAMA (HEADER)  
-  dash.getRange("A8").setValue("LIST UNIT MOBIL").setFontWeight("bold").setBackground("#eeeeee").setHorizontalAlignment("center"); 
+  // --- BAGIAN 2: TABEL JADWAL (SISI KIRI) ---
+  dash.getRange("A8").setValue("JADWAL BOOKING ARMADA").setFontWeight("bold").setBackground("#444444").setFontColor("white").setHorizontalAlignment("center"); 
   dash.getRange("B8").setFormula("=TODAY()").setNumberFormat("dd/MM (ddd)");  
   dash.getRange("C8:H8").setFormula("=B8+1");  
-  dash.getRange("B8:H8").setFontWeight("bold").setBackground("#eeeeee").setHorizontalAlignment("center");  
+  dash.getRange("A8:H8").setFontWeight("bold").setBackground("#eeeeee").setHorizontalAlignment("center");  
 
-  // 4. ISI NAMA MOBIL
+  // Isi Nama Mobil & Rumus Jadwal
   dash.getRange("A9").setFormula("=QUERY(Master_Mobil!A2:A; \"SELECT A WHERE A IS NOT NULL\")");  
-
-  // 5. RUMUS JADWAL (MENGGUNAKAN TITIK KOMA ; )
-  // Saya sederhanakan rumusnya agar tidak memicu 'Formula Parse Error' lagi.
   const rumusJadwal = "=ARRAYFORMULA(IF(A9:A=\"\"; \"\"; IFERROR(MAP(A9:A; LAMBDA(m; MAP(B8:H8; LAMBDA(t; IF(COUNTIFS('Request Mobil'!$E:$E; m; 'Request Mobil'!$S:$S; \"Approved\"; INT('Request Mobil'!$C:$C); t)>0; \"🔴 BOOKED\"; \"✅ AVAILABLE\"))))); \"✅ AVAILABLE\")))";
-  
   dash.getRange("B9").setFormula(rumusJadwal);  
 
-  // 6. WARNA OTOMATIS
+  // --- BAGIAN 3: ANALISIS BEBAN KERJA (SISI KANAN - KOLOM J) ---
+  const colStat = "J";
+  const bulanIni = new Date().getMonth() + 1;
+
+  dash.getRange(colStat + "8:" + "L8").merge()
+    .setValue("UTILITAS ARMADA (BULAN INI)")
+    .setFontWeight("bold").setBackground("#444444").setFontColor("white").setHorizontalAlignment("center");
+
+  dash.getRange(colStat + "9").setValue("NAMA UNIT").setFontWeight("bold").setBackground("#eeeeee");
+  dash.getRange("K9").setValue("TOTAL TRIP").setFontWeight("bold").setBackground("#eeeeee");
+  dash.getRange("L9").setValue("BEBAN %").setFontWeight("bold").setBackground("#eeeeee");
+
+  // Rumus Utilitas (Query mengambil data dari Request Mobil)
+  dash.getRange(colStat + "10").setFormula("=QUERY('Request Mobil'!A2:S; \"SELECT E, COUNT(E) WHERE S = 'Approved' AND MONTH(C)+1 = " + bulanIni + " GROUP BY E LABEL COUNT(E) ''\"; 0)");
+  
+  // Rumus Persentase Beban (Asumsi 22 hari kerja)
+  // Menghitung otomatis ke bawah sebanyak jumlah mobil yang muncul di statistik
+  dash.getRange("L10").setFormula("=ARRAYFORMULA(IF(K10:K=\"\"; \"\"; K10:K/22))");
+  dash.getRange("L10:L35").setNumberFormat("0%");
+
+  // --- BAGIAN 4: STYLING & FINISHING ---
+  // Warna Jadwal
   dash.clearConditionalFormatRules();
   const rangeJadwal = dash.getRange("B9:H35");
   const ruleHijau = SpreadsheetApp.newConditionalFormatRule().whenTextContains("✅ AVAILABLE").setBackground("#d4edda").setFontColor("#155724").setRanges([rangeJadwal]).build();
   const ruleMerah = SpreadsheetApp.newConditionalFormatRule().whenTextContains("🔴 BOOKED").setBackground("#f8d7da").setFontColor("#721c24").setRanges([rangeJadwal]).build();
-  dash.setConditionalFormatRules([ruleHijau, ruleMerah]);
-
-  // 7. FINISHING
-  dash.setColumnWidth(1, 200); 
-  dash.setColumnWidths(2, 7, 120); 
-  dash.getRange("A8:H35").setBorder(true, true, true, true, true, true, "#cccccc", SpreadsheetApp.BorderStyle.SOLID);  
-  dash.getRange("A9:H35").setVerticalAlignment("middle").setHorizontalAlignment("center");
   
-  // FIX: Menggunakan ss.setHideGridlines(true) atau dash.setHideGridlines(true) tergantung versi Apps Script
-  // Jika masih error, hapus baris di bawah ini karena hanya opsional (tampilan)
+  // Warna Utilitas (Heatmap: Makin tinggi % makin merah)
+  const rangePersen = dash.getRange("L10:L35");
+  const ruleBeban = SpreadsheetApp.newConditionalFormatRule()
+    .setGradientMaxColor("#FF5555")
+    .setGradientMinColor("#FFFFFF")
+    .setRanges([rangePersen])
+    .build();
+
+  dash.setConditionalFormatRules([ruleHijau, ruleMerah, ruleBeban]);
+
+  // Pengaturan Lebar Kolom
+  dash.setColumnWidth(1, 180); // Kolom A
+  dash.setColumnWidths(2, 7, 110); // Kolom B-H
+  dash.setColumnWidth(9, 30); // Kolom I (Pemisah)
+  dash.setColumnWidth(10, 180); // Kolom J
+  dash.setColumnWidths(11, 2, 90); // Kolom K-L
+
+  // Border
+  dash.getRange("A8:H35").setBorder(true, true, true, true, true, true, "#cccccc", SpreadsheetApp.BorderStyle.SOLID);
+  dash.getRange("J8:L35").setBorder(true, true, true, true, true, true, "#cccccc", SpreadsheetApp.BorderStyle.SOLID);
+  
+  dash.getRange("A9:L35").setVerticalAlignment("middle").setHorizontalAlignment("center");
+  
   try { dash.setHideGridlines(true); } catch(e) { }
 
-  Browser.msgBox("✅ DASHBOARD SELESAI DIPERBAIKI!");
+  Browser.msgBox("🚀 DASHBOARD MANAGER GABUNGAN SELESAI!");
 }
 
 /************************************************************
