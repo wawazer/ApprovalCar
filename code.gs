@@ -1,28 +1,37 @@
 /************************************************************
- * CONFIGURATION & MAPPING 
- ************************************************************/
+ CONFIGURATION & MAPPING 
+Form pengisian: https://docs.google.com/forms/d/e/1FAIpQLSePhv7LjAdoDjZuIkMuiD8zBkJRYeye8oTmTfcBi9_3kXkv1A/viewform
+Form Edit     : https://docs.google.com/forms/d/1k-evV4VwEn29VSHheqlvgML6d0SQfGE7SZiWh0t-9s4/edit
+Script Kedua  : https://script.google.com/home/projects/1w7DYmivkpJh9jOKTb2F5eJ8QlgfdnfMpW4scPeSHkUg3el7kxGcmTztW/edit
+************************************************************/
+
 const SPREADSHEET_ID = '1hg3CynBrqFci3kEg7c611ht4jtIDO9Ocyh2RPc1ixE8';
 const SHEET_NAME     = 'Request Mobil';
 const FORM_ID        = '1k-evV4VwEn29VSHheqlvgML6d0SQfGE7SZiWh0t-9s4';
 const WEBAPP_URL     = 'https://script.google.com/macros/s/AKfycbxICLEfVFaYQdZydstk4kwmZHipDNvTSxB2xj1DwATX9wHAmCCW8FZQf9SiwxiEgtlOnQ/exec'; 
 
-const LV1_APPROVER_EMAILS = 'muhammad.wawazer@pelindo.co.id';
-const CC_EMAIL = 'wawazer@gmail.com';
+const LV1_APPROVER_EMAILS = 'iwan.sulistiono@pelindo.co.id';
+const CC_EMAIL = 'listio.margianto@pelindo.co.id,wahyu.ekoyulianto@pelindo.co.id,muhammad.wawazer@pelindo.co.id';
 
-const COL_TIMESTAMP      = 1;  
-const COL_TGL_BERANGKAT  = 3;  
-const COL_TGL_KEPULANGAN = 4;  
-const COL_PILIH_KENDARAAN= 5;  
-const COL_EMAIL_PEMOHON  = 6;  
-const COL_UNIT_KERJA     = 7;  
-const COL_DAFTAR_TAMU    = 8;  
-const COL_TUJUAN         = 9;  
-const COL_HOTEL          = 10; 
-const COL_NAMA_PEMOHON   = 13; 
-const COL_WA_PEMOHON     = 15; 
-const COL_STATUS_LV1     = 17; 
-const COL_STATUS_FINAL   = 19; 
-const COL_REASON_LV1     = 20; 
+const COL_TIMESTAMP      = 1;  // Kolom A
+const COL_SPPD           = 2;  // Kolom B 
+const COL_TGL_BERANGKAT  = 3;  // Kolom C
+const COL_TGL_KEPULANGAN = 4;  // Kolom D
+const COL_PILIH_KENDARAAN= 5;  // Kolom E
+const COL_EMAIL_PEMOHON  = 6;  // Kolom F
+const COL_UNIT_KERJA     = 7;  // Kolom G
+const COL_DAFTAR_TAMU    = 8;  // Kolom H
+const COL_TUJUAN         = 9;  // Kolom I
+const COL_HOTEL          = 10; // Kolom J
+const COL_JUMLAH_HARI    = 11; // Kolom K
+const COL_BIAYA          = 12; // Kolom L
+const COL_NAMA_PEMOHON   = 13; // Kolom M
+const COL_WA_PEMOHON     = 15; // Kolom O
+const COL_TIPE_PERJALANAN= 16; // Kolom P 
+const COL_STATUS_LV1     = 17; // Kolom Q
+const COL_STATUS_LV2     = 18; // Kolom R
+const COL_STATUS_FINAL   = 19; // Kolom S
+const COL_REASON_LV1     = 20; // Kolom T
 
 /************************************************************
  * 1. TRIGGER: ON FORM SUBMIT 
@@ -170,71 +179,6 @@ function processRequest(e) {
   }
 }
 
-// function processRequest(e) {
-//   try {
-//     const action = e.parameter.action;
-//     const row = parseInt(e.parameter.row);
-//     const reason = e.parameter.reason || "";
-
-//     if (action === "reject" && !e.parameter.reason) return renderReasonForm(row);
-
-//     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-//     const sheet = ss.getSheetByName(SHEET_NAME);
-//     const status = action === "approve" ? "Approved" : "Rejected";
-    
-//     sheet.getRange(row, COL_STATUS_LV1).setValue(status);
-//     sheet.getRange(row, COL_STATUS_FINAL).setValue(status);
-//     if (action === "reject") sheet.getRange(row, COL_REASON_LV1).setValue(reason);
-
-//     const vals = sheet.getRange(row, 1, 1, 21).getValues()[0];
-//     const noWaPemohon = vals[COL_WA_PEMOHON - 1]; 
-//     const namaPIC = vals[COL_NAMA_PEMOHON - 1];
-//     const unitMobil = vals[COL_PILIH_KENDARAAN - 1].toString();
-
-//     // =======================================================
-//     // TAMBAHAN: UPDATE STATUS DI MASTER_ARMADA JADI "In Use"
-//     // =======================================================
-//     if (action === "approve") {
-//       const sheetMaster = ss.getSheetByName("Master_Armada");
-//       if (sheetMaster) {
-//         const dataMaster = sheetMaster.getDataRange().getValues();
-//         for (let i = 1; i < dataMaster.length; i++) {
-//           // Cek apakah plat nomor di Master_Armada ada di dalam teks unitMobil
-//           if (unitMobil.indexOf(dataMaster[i][0]) !== -1) { 
-//             sheetMaster.getRange(i + 1, 5).setValue("In Use"); //
-//             break;
-//           }
-//         }
-//       }
-//     }
-//     // =======================================================
-
-//     if (noWaPemohon) {
-//       let pesanWA = "";
-//       if (action === "approve") {
-//         pesanWA = `✅ *PERMOHONAN DISETUJUI*\n\nHalo *${namaPIC}*,\nPermohonan mobil *${unitMobil}* Anda telah *DISETUJUI*.\n\nSelamat bertugas!`;
-//       } else {
-//         pesanWA = `❌ *PERMOHONAN DITOLAK*\n\nHalo *${namaPIC}*,\nMohon maaf, permohonan mobil *${unitMobil}* Anda *DITOLAK*.\n*Alasan:* ${reason}`;
-//       }
-//       kirimWAWatzap(noWaPemohon, pesanWA);
-//     }
-
-//     kirimEmailFinal_(row, status, reason);
-
-//     return HtmlService.createHtmlOutput(`
-//       <div style="font-family:sans-serif;text-align:center;padding-top:50px;">
-//         <div style="display:inline-block;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
-//           <h2 style="color:#28a745;">✅ BERHASIL!</h2>
-//           <p>Status baris <b>${row}</b> sudah di-update menjadi <b>${status}</b>.</p>
-//           <p>Status mobil di Master Armada juga telah diperbarui.</p>
-//           <p>Anda bisa menutup halaman ini.</p>
-//         </div>
-//       </div>`);
-//   } catch (err) {
-//     return HtmlService.createHtmlOutput("<b>ERROR:</b> " + err.message);
-//   }
-// }
-
 /************************************************************
  * 3. RENDER FORM REJECT
  ************************************************************/
@@ -329,85 +273,6 @@ function kirimEmailFinal_(row, status, reason) {
 /************************************************************
  * 3. SCHEDULER: UPDATE DROPDOWN FORM
  ************************************************************/
-// function filterMobilTersedia() {
-//   const ss = SpreadsheetApp.getActiveSpreadsheet();
-//   const masterSheet = ss.getSheetByName('Master_Mobil');
-//   const requestSheet = ss.getSheetByName('Request Mobil');
-//   const logSheet = ss.getSheetByName('Log_Scheduler');
-//   const form = FormApp.openById(FORM_ID); 
-  
-//   const sekarang = new Date();
-//   const masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 1).getValues();
-//   const listMobilMaster = masterData.map(row => row[0].toString().trim()).filter(String);
-//   const dataRequest = requestSheet.getDataRange().getValues();
-  
-//   let statusMobilMap = {}; 
-//   let mobilTerpakai = [];
-  
-//   // cek masa depan: 48 Jam agar user tahu jadwal besok
-//   const rentangMasaDepan = new Date(sekarang.getTime() + (48 * 60 * 60 * 1000)); 
-
-//   for (let i = 1; i < dataRequest.length; i++) {
-//     const statusFinal = dataRequest[i][COL_STATUS_FINAL - 1];
-//     const tglMulaiRaw = dataRequest[i][COL_TGL_BERANGKAT - 1];
-//     const tglSelesaiRaw = dataRequest[i][COL_TGL_KEPULANGAN - 1];
-    
-//     const tglMulai = new Date(tglMulaiRaw);
-//     const tglSelesai = new Date(tglSelesaiRaw);
-    
-//     const noMobil = dataRequest[i][COL_PILIH_KENDARAAN - 1].toString()
-//                     .split(" (")[0]
-//                     .replace("⚠️ ", "")
-//                     .replace("✅ ", "")
-//                     .trim();
-
-//     if (statusFinal === "Approved" && !isNaN(tglMulai.getTime())) {
-      
-//       // KONDISI 1: MOBIL SEDANG DIGUNAKAN SAAT INI
-//       if (sekarang >= tglMulai && sekarang <= tglSelesai) {
-//         statusMobilMap[noMobil] = "SEDANG JALAN s.d. " + Utilities.formatDate(tglSelesai, "GMT+7", "dd/MM HH:mm");
-//         if (!mobilTerpakai.includes(noMobil)) mobilTerpakai.push(noMobil);
-//       } 
-      
-//       // KONDISI 2: MOBIL SUDAH DI-BOOKED UNTUK JADWAL MENDATANG (Dalam 48 Jam)
-//       else if (tglMulai > sekarang && tglMulai <= rentangMasaDepan) {
-//         if (!statusMobilMap[noMobil]) {
-//           statusMobilMap[noMobil] = "BOOKED " + 
-//                                     Utilities.formatDate(tglMulai, "GMT+7", "dd/MM HH:mm") + 
-//                                     " s.d. " + 
-//                                     Utilities.formatDate(tglSelesai, "GMT+7", "dd/MM HH:mm");
-//           if (!mobilTerpakai.includes(noMobil)) mobilTerpakai.push(noMobil);
-//         }
-//       }
-//     }
-//   }
-
-//   // Membuat daftar tampilan baru untuk dropdown
-//   const listTampilanBaru = listMobilMaster.map(mobil => {
-//     if (statusMobilMap[mobil]) {
-//       return `⚠️ ${mobil} (${statusMobilMap[mobil]})`;
-//     }
-//     return `✅ ${mobil} (Tersedia)`;
-//   });
-
-//   const item = form.getItems(FormApp.ItemType.LIST).find(i => i.getTitle().trim() === "Pilih Kendaraan");
-//   let statusUpdate = "Failed: Item Not Found";
-  
-//   if (item) {
-//     item.asListItem().setChoiceValues(listTampilanBaru);
-//     statusUpdate = "Success";
-//   }
-
-//   if (logSheet) {
-//     logSheet.appendRow([
-//       sekarang, 
-//       statusUpdate, 
-//       mobilTerpakai.join(", ") || "Semua Tersedia", 
-//       "Update otomatis dropdown"
-//     ]);
-//   }
-// }
-
 function filterMobilTersedia() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const masterSheet = ss.getSheetByName('Master_Mobil');
@@ -434,7 +299,7 @@ function filterMobilTersedia() {
   
   let statusMobilMap = {}; 
   let mobilTerpakai = [];
-  // Tingkatkan rentang masa depan ke 7 hari (168 jam) sesuai request Abang sebelumnya
+  // Tingkatkan rentang masa depan ke 7 hari (168 jam) 
   const rentangMasaDepan = new Date(sekarang.getTime() + (168 * 60 * 60 * 1000)); 
 
   for (let i = 1; i < dataRequest.length; i++) {
@@ -563,7 +428,7 @@ function buatDashboardOtomatis() {
     dash.clear(); 
   }  
 
-  // --- BAGIAN 1: HEADER & STATISTIK RINGKAS ---
+  // --- 1. HEADER & STATISTIK ---
   dash.getRange("A1:L1").merge()  
     .setValue("FLEET MONITORING & PERFORMANCE DASHBOARD")  
     .setFontSize(18).setFontWeight("bold")  
@@ -573,78 +438,56 @@ function buatDashboardOtomatis() {
   dash.getRange("A2").setValue("Terakhir Update:").setFontWeight("bold");  
   dash.getRange("B2").setValue(new Date()).setNumberFormat("dd/MM/yyyy HH:mm");  
 
-  // Kotak Statistik Atas
-  dash.getRange("A4").setValue("Total Armada");
-  dash.getRange("B4").setFormula("=COUNTA(Master_Mobil!A2:A)");
-  dash.getRange("A5").setValue("Unit In-Use");
-  dash.getRange("B5").setFormula("=COUNTIF(Master_Armada!E:E; \"In Use\")");
-  dash.getRange("A6").setValue("Unit Available");
-  dash.getRange("B6").setFormula("=COUNTIF(Master_Armada!E:E; \"Available\")");
-
-  // --- BAGIAN 2: TABEL JADWAL (SISI KIRI) ---
-  dash.getRange("A8").setValue("JADWAL BOOKING ARMADA").setFontWeight("bold").setBackground("#444444").setFontColor("white").setHorizontalAlignment("center"); 
+  // --- 2. JADWAL DENGAN LOGIKA JAM ---
+  dash.getRange("A8:H8").setFontWeight("bold").setBackground("#eeeeee").setHorizontalAlignment("center");  
+  dash.getRange("A8").setValue("JADWAL BOOKING ARMADA").setBackground("#444444").setFontColor("white"); 
   dash.getRange("B8").setFormula("=TODAY()").setNumberFormat("dd/MM (ddd)");  
   dash.getRange("C8:H8").setFormula("=B8+1");  
-  dash.getRange("A8:H8").setFontWeight("bold").setBackground("#eeeeee").setHorizontalAlignment("center");  
 
-  // Isi Nama Mobil & Rumus Jadwal
+  // Nama Mobil
   dash.getRange("A9").setFormula("=QUERY(Master_Mobil!A2:A; \"SELECT A WHERE A IS NOT NULL\")");  
-  const rumusJadwal = "=ARRAYFORMULA(IF(A9:A=\"\"; \"\"; IFERROR(MAP(A9:A; LAMBDA(m; MAP(B8:H8; LAMBDA(t; IF(COUNTIFS('Request Mobil'!$E:$E; m; 'Request Mobil'!$S:$S; \"Approved\"; INT('Request Mobil'!$C:$C); t)>0; \"🔴 BOOKED\"; \"✅ AVAILABLE\"))))); \"✅ AVAILABLE\")))";
-  dash.getRange("B9").setFormula(rumusJadwal);  
 
-  // --- BAGIAN 3: ANALISIS BEBAN KERJA (SISI KANAN - KOLOM J) ---
-  const colStat = "J";
+  // (Menampilkan Jam & Status IN USE / BOOKED)
+  const rumusJadwalJam = "=ARRAYFORMULA(IF(A9:A=\"\"; \"\"; IFERROR(MAP(A9:A; LAMBDA(m; MAP(B8:H8; LAMBDA(t; " +
+    "LET( " +
+    "  data; FILTER('Request Mobil'!$A:$S; TRIM('Request Mobil'!$E:$E)=TRIM(m); INT('Request Mobil'!$C:$C)=t; (ISNUMBER(SEARCH(\"Approv\";'Request Mobil'!$S:$S))) + (ISNUMBER(SEARCH(\"JALAN\";'Request Mobil'!$S:$S)))); " +
+    "  IF(ISNA(INDEX(data; 1; 1)); \"✅ AVAILABLE\"; " +
+    "    IF(ISNUMBER(SEARCH(\"JALAN\"; INDEX(data; 1; 19))); \"🔴 IN USE\"; \"🔴 BOOKED\") & CHAR(10) & " +
+    "    TEXT(INDEX(data; 1; 3); \"HH:mm\") & \" - \" & TEXT(INDEX(data; 1; 4); \"HH:mm\") " +
+    "  )" +
+    "))))); \"✅ AVAILABLE\")))";
+  
+  dash.getRange("B9").setFormula(rumusJadwalJam);  
+
+  // --- 3. ANALISIS UTILITAS ---
   const bulanIni = new Date().getMonth() + 1;
+  dash.getRange("J8:L8").merge().setValue("UTILITAS ARMADA (BULAN INI)").setFontWeight("bold").setBackground("#444444").setFontColor("white");
+  dash.getRange("J9").setValue("NAMA UNIT").setFontWeight("bold");
+  dash.getRange("K9").setValue("TRIP").setFontWeight("bold");
+  dash.getRange("L9").setValue("%").setFontWeight("bold");
 
-  dash.getRange(colStat + "8:" + "L8").merge()
-    .setValue("UTILITAS ARMADA (BULAN INI)")
-    .setFontWeight("bold").setBackground("#444444").setFontColor("white").setHorizontalAlignment("center");
-
-  dash.getRange(colStat + "9").setValue("NAMA UNIT").setFontWeight("bold").setBackground("#eeeeee");
-  dash.getRange("K9").setValue("TOTAL TRIP").setFontWeight("bold").setBackground("#eeeeee");
-  dash.getRange("L9").setValue("BEBAN %").setFontWeight("bold").setBackground("#eeeeee");
-
-  // Rumus Utilitas (Query mengambil data dari Request Mobil)
-  dash.getRange(colStat + "10").setFormula("=QUERY('Request Mobil'!A2:S; \"SELECT E, COUNT(E) WHERE S = 'Approved' AND MONTH(C)+1 = " + bulanIni + " GROUP BY E LABEL COUNT(E) ''\"; 0)");
-  
-  // Rumus Persentase Beban (Asumsi 22 hari kerja)
-  // Menghitung otomatis ke bawah sebanyak jumlah mobil yang muncul di statistik
+  dash.getRange("J10").setFormula("=QUERY('Request Mobil'!A2:S; \"SELECT E, COUNT(E) WHERE (S CONTAINS 'Approv' OR S CONTAINS 'JALAN') AND MONTH(C)+1 = " + bulanIni + " GROUP BY E LABEL COUNT(E) ''\"; 0)");
   dash.getRange("L10").setFormula("=ARRAYFORMULA(IF(K10:K=\"\"; \"\"; K10:K/22))");
-  dash.getRange("L10:L35").setNumberFormat("0%");
+  dash.getRange("L10:L40").setNumberFormat("0%");
 
-  // --- BAGIAN 4: STYLING & FINISHING ---
-  // Warna Jadwal
+  // --- 4. STYLING (VERSI AMAN) ---
   dash.clearConditionalFormatRules();
-  const rangeJadwal = dash.getRange("B9:H35");
-  const ruleHijau = SpreadsheetApp.newConditionalFormatRule().whenTextContains("✅ AVAILABLE").setBackground("#d4edda").setFontColor("#155724").setRanges([rangeJadwal]).build();
-  const ruleMerah = SpreadsheetApp.newConditionalFormatRule().whenTextContains("🔴 BOOKED").setBackground("#f8d7da").setFontColor("#721c24").setRanges([rangeJadwal]).build();
+  const rangeJadwal = dash.getRange("B9:H40");
   
-  // Warna Utilitas (Heatmap: Makin tinggi % makin merah)
-  const rangePersen = dash.getRange("L10:L35");
-  const ruleBeban = SpreadsheetApp.newConditionalFormatRule()
-    .setGradientMaxColor("#FF5555")
-    .setGradientMinColor("#FFFFFF")
-    .setRanges([rangePersen])
-    .build();
+  const ruleHijau = SpreadsheetApp.newConditionalFormatRule().whenTextContains("AVAILABLE").setBackground("#d4edda").setFontColor("#155724").setRanges([rangeJadwal]).build();
+  const ruleMerah = SpreadsheetApp.newConditionalFormatRule().whenTextContains("🔴").setBackground("#f8d7da").setFontColor("#721c24").setRanges([rangeJadwal]).build();
+  dash.setConditionalFormatRules([ruleHijau, ruleMerah]);
 
-  dash.setConditionalFormatRules([ruleHijau, ruleMerah, ruleBeban]);
-
-  // Pengaturan Lebar Kolom
-  dash.setColumnWidth(1, 180); // Kolom A
-  dash.setColumnWidths(2, 7, 110); // Kolom B-H
-  dash.setColumnWidth(9, 30); // Kolom I (Pemisah)
-  dash.setColumnWidth(10, 180); // Kolom J
-  dash.setColumnWidths(11, 2, 90); // Kolom K-L
-
+  // Lebar & Tinggi Kolom
+  dash.setColumnWidth(1, 230); 
+  dash.setColumnWidths(2, 7, 120); 
+  dash.getRange("B9:H40").setWrap(true);
+  
   // Border
-  dash.getRange("A8:H35").setBorder(true, true, true, true, true, true, "#cccccc", SpreadsheetApp.BorderStyle.SOLID);
-  dash.getRange("J8:L35").setBorder(true, true, true, true, true, true, "#cccccc", SpreadsheetApp.BorderStyle.SOLID);
-  
-  dash.getRange("A9:L35").setVerticalAlignment("middle").setHorizontalAlignment("center");
-  
-  try { dash.setHideGridlines(true); } catch(e) { }
+  dash.getRange("A8:H40").setBorder(true, true, true, true, true, true, "#cccccc", SpreadsheetApp.BorderStyle.SOLID);
+  dash.getRange("A9:L40").setVerticalAlignment("middle").setHorizontalAlignment("center");
 
-  Browser.msgBox("🚀 DASHBOARD MANAGER GABUNGAN SELESAI!");
+  Browser.msgBox("✅ DASHBOARD DENGAN BERHASIL DIBUAT!");
 }
 
 /************************************************************
@@ -657,6 +500,7 @@ function onOpen() {
 .addItem('🚀 Buat Dashboard Otomatis', 'buatDashboardOtomatis')
       .addSeparator()
       .addItem('⚙️ Cek Otorisasi WA', 'cekOtorisasiManual')
+      .addItem('Kirim Laporan Bulan Ini Manual','kirimManualBulanan')
       .addToUi();
 }
 
@@ -671,22 +515,18 @@ function cekOtorisasiManual() {
 // DRIVER ROLE
 // ==========================================
 function updateFormDropdown() {
-  // 1. ID Google Form abang (ambil dari URL saat edit Form)
   const formId = "10_a-XaPZ_U4Ql-Z-R03Z239Yi6J3heP0a_W4MckC1OQ"; 
   const form = FormApp.openById(formId);
   
-  // 2. Nama Sheet dan Range data mobil
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetMaster = ss.getSheetByName("Master_Armada"); 
   const data = sheetMaster.getRange("A2:A" + sheetMaster.getLastRow()).getValues();
   
-  // 3. Ubah data jadi list satu baris
   const listMobil = data.map(row => row[0]).filter(item => item !== "");
   
-  // 4. Cari pertanyaan Dropdown di Form (berdasarkan judulnya)
   const items = form.getItems();
   for (var i = 0; i < items.length; i++) {
-    if (items[i].getTitle() === "Pilih Unit Mobil") { // Sesuaikan dengan judul di Form
+    if (items[i].getTitle() === "Pilih Unit Mobil") { 
       items[i].asListItem().setChoiceValues(listMobil);
       break;
     }
@@ -758,7 +598,7 @@ function updateStatusFisik(namaUnit, statusBaru) {
 
 
 /*****************
- * 
+ * jgn hapus ini
  * 
  */
 function setupSemuaTrigger() {
@@ -784,4 +624,166 @@ function setupSemuaTrigger() {
     .create();
     
   Browser.msgBox("✅ Berhasil! Semua trigger (termasuk Pembersih Otomatis) telah dipasang.");
+}
+
+
+/*****************
+ * kirim email tiap tgl 1 otomatis
+ */
+function kirimLaporanBulanan() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Request Mobil');
+  const data = sheet.getDataRange().getValues();
+  
+  const sekarang = new Date();
+  const bulanLalu = sekarang.getMonth() - 1 ; // 0 = Jan, 1 = Feb, dst.
+  // const bulanLalu = sekarang.getMonth() - 1;
+  const tahun = sekarang.getFullYear();
+  const namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  
+  let totalTrip = 0;
+  let dinasTrip = 0;
+  let takziahTrip = 0;
+  let unitStats = {}; // Untuk menghitung trip per mobil
+  let unitKerjaStats = {}; // Untuk menghitung trip per unit kerja
+
+  for (let i = 1; i < data.length; i++) {
+    let tglBerangkat = new Date(data[i][2]); // Kolom C (Index 2)
+    let tipePerjalanan = data[i][15]; // Kolom P (Index 15)
+    let unitMobil = data[i][4]; // Kolom E (Index 4)
+    let unitKerja = data[i][6]; // Kolom G (Index 6)
+    let statusFinal = data[i][18]; // Kolom S (Index 18)
+
+    // Filter hanya data bulan lalu yang sudah Approved/Selesai
+    if (tglBerangkat.getMonth() === (bulanLalu < 0 ? 11 : bulanLalu) && 
+        (statusFinal.includes("Approv") || statusFinal.includes("JALAN") || statusFinal.includes("Selesai"))) {
+      
+      totalTrip++;
+      
+      // Hitung Tipe
+      if (tipePerjalanan === "Dinas") { dinasTrip++; } else { takziahTrip++; }
+      
+      // Hitung per Mobil
+      unitStats[unitMobil] = (unitStats[unitMobil] || 0) + 1;
+      
+      // Hitung per Unit Kerja
+      unitKerjaStats[unitKerja] = (unitKerjaStats[unitKerja] || 0) + 1;
+    }
+  }
+
+  // Cari Unit Mobil Teraktif
+  let unitTeraktif = Object.keys(unitStats).reduce((a, b) => unitStats[a] > unitStats[b] ? a : b, "Tidak ada data");
+  
+  const emailManager = "wawazer@gmail.com"; 
+  const subjek = "[LAPORAN] Utilitas Armada Regional 3 - Periode " + namaBulan[bulanLalu < 0 ? 11 : bulanLalu];
+  
+  let htmlBody = `
+    <div style="font-family: Arial, sans-serif; color: #333;">
+      <h2 style="color: #004a99;">Executive Summary Penggunaan Armada</h2>
+      <p>Berikut adalah ringkasan laporan utilitas kendaraan untuk periode bulan lalu:</p>
+      <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <tr style="background-color: #eeeeee;">
+          <th>Kategori</th>
+          <th>Data Statistik</th>
+        </tr>
+        <tr><td>Total Perjalanan</td><td><b>${totalTrip} Trip</b></td></tr>
+        <tr><td>Perjalanan Dinas</td><td>${dinasTrip} Trip</td></tr>
+        <tr><td>Perjalanan Takziah/Lokal</td><td>${takziahTrip} Trip</td></tr>
+        <tr><td>Unit Mobil Teraktif</td><td><b>${unitTeraktif}</b> (${unitStats[unitTeraktif] || 0} kali jalan)</td></tr>
+      </table>
+      <p>Detail lengkap dapat dilihat melalui <b>Dashboard Monitoring</b> perusahaan.</p>
+      <br>
+      <small><i>Sent automatically by P-CAR System - Pelindo Regional 3</i></small>
+    </div>
+  `;
+
+  // Kirim Email
+  if (totalTrip > 0) {
+    MailApp.sendEmail({
+      to: emailManager,
+      subject: subjek,
+      htmlBody: htmlBody
+    });
+  }
+}
+
+
+/************
+ * kirim email manual
+ */
+function kirimManualBulanan() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Request Mobil');
+  const data = sheet.getDataRange().getValues();
+  
+  const sekarang = new Date();
+  const bulanLalu = sekarang.getMonth()  ; // 0 = Jan, 1 = Feb, dst.
+  // const bulanLalu = sekarang.getMonth() - 1;
+  const tahun = sekarang.getFullYear();
+  const namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  
+  let totalTrip = 0;
+  let dinasTrip = 0;
+  let takziahTrip = 0;
+  let unitStats = {}; // Untuk menghitung trip per mobil
+  let unitKerjaStats = {}; // Untuk menghitung trip per unit kerja
+
+  for (let i = 1; i < data.length; i++) {
+    let tglBerangkat = new Date(data[i][2]); // Kolom C (Index 2)
+    let tipePerjalanan = data[i][15]; // Kolom P (Index 15)
+    let unitMobil = data[i][4]; // Kolom E (Index 4)
+    let unitKerja = data[i][6]; // Kolom G (Index 6)
+    let statusFinal = data[i][18]; // Kolom S (Index 18)
+
+    // Filter hanya data bulan lalu yang sudah Approved/Selesai
+    if (tglBerangkat.getMonth() === (bulanLalu < 0 ? 11 : bulanLalu) && 
+        (statusFinal.includes("Approv") || statusFinal.includes("JALAN") || statusFinal.includes("Selesai"))) {
+      
+      totalTrip++;
+      
+      // Hitung Tipe
+      if (tipePerjalanan === "Dinas") { dinasTrip++; } else { takziahTrip++; }
+      
+      // Hitung per Mobil
+      unitStats[unitMobil] = (unitStats[unitMobil] || 0) + 1;
+      
+      // Hitung per Unit Kerja
+      unitKerjaStats[unitKerja] = (unitKerjaStats[unitKerja] || 0) + 1;
+    }
+  }
+
+  // Cari Unit Mobil Teraktif
+  let unitTeraktif = Object.keys(unitStats).reduce((a, b) => unitStats[a] > unitStats[b] ? a : b, "Tidak ada data");
+  
+  const emailManager = "wawazer@gmail.com"; 
+  const subjek = "[LAPORAN] Utilitas Armada Regional 3 - Periode " + namaBulan[bulanLalu < 0 ? 11 : bulanLalu];
+  
+  let htmlBody = `
+    <div style="font-family: Arial, sans-serif; color: #333;">
+      <h2 style="color: #004a99;">Executive Summary Penggunaan Armada</h2>
+      <p>Berikut adalah ringkasan laporan utilitas kendaraan untuk periode bulan lalu:</p>
+      <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <tr style="background-color: #eeeeee;">
+          <th>Kategori</th>
+          <th>Data Statistik</th>
+        </tr>
+        <tr><td>Total Perjalanan</td><td><b>${totalTrip} Trip</b></td></tr>
+        <tr><td>Perjalanan Dinas</td><td>${dinasTrip} Trip</td></tr>
+        <tr><td>Perjalanan Takziah/Lokal</td><td>${takziahTrip} Trip</td></tr>
+        <tr><td>Unit Mobil Teraktif</td><td><b>${unitTeraktif}</b> (${unitStats[unitTeraktif] || 0} kali jalan)</td></tr>
+      </table>
+      <p>Detail lengkap dapat dilihat melalui <b>Dashboard Monitoring</b> perusahaan.</p>
+      <br>
+      <small><i>Sent automatically by P-CAR System - Pelindo Regional 3</i></small>
+    </div>
+  `;
+
+  // Kirim Email
+  if (totalTrip > 0) {
+    MailApp.sendEmail({
+      to: emailManager,
+      subject: subjek,
+      htmlBody: htmlBody
+    });
+  }
 }
